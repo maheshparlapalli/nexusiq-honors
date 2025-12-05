@@ -9,6 +9,7 @@ interface FieldConfig {
   placeholder: string;
   position: { x: number; y: number };
   font: { size: number; color: string; weight: string; family: string };
+  line?: { width: number; height: number; color: string };
 }
 
 interface TemplateFormData {
@@ -77,10 +78,11 @@ const EMPTY_FIELD: FieldConfig = {
   type: 'text',
   placeholder: '',
   position: { x: 528, y: 400 },
-  font: { size: 24, color: '#333333', weight: 'normal', family: 'Arial' }
+  font: { size: 24, color: '#333333', weight: 'normal', family: 'Arial' },
+  line: { width: 200, height: 2, color: '#333333' }
 };
 
-const FIELD_TYPES = ['text', 'date', 'number', 'textarea', 'image'];
+const FIELD_TYPES = ['text', 'date', 'number', 'textarea', 'image', 'line_horizontal', 'line_vertical'];
 const FONT_FAMILIES = ['Georgia', 'Arial', 'Times New Roman', 'Helvetica', 'Roboto', 'Verdana', 'Courier New'];
 const FONT_WEIGHTS = ['normal', 'bold', 'lighter'];
 const ORIENTATIONS = ['landscape', 'portrait', 'square'];
@@ -159,6 +161,15 @@ export default function TemplateBuilder() {
       ...prev,
       fields: prev.fields.map((f, i) => 
         i === index ? { ...f, font: { ...f.font, [key]: value } } : f
+      )
+    }));
+  }
+
+  function updateFieldLine(index: number, key: string, value: any) {
+    setFormData(prev => ({
+      ...prev,
+      fields: prev.fields.map((f, i) => 
+        i === index ? { ...f, line: { ...(f.line || { width: 200, height: 2, color: '#333333' }), [key]: value } } : f
       )
     }));
   }
@@ -403,29 +414,31 @@ export default function TemplateBuilder() {
               <div style={styles.formGroup}>
                 <LabelWithInfo 
                   label="Field Type" 
-                  tooltip="The type of data this field accepts: 'text' for names/titles, 'date' for dates, 'number' for scores/grades, 'textarea' for longer text, 'image' for photos."
+                  tooltip="Choose the type: 'text' for names/titles, 'date' for dates, 'number' for scores, 'image' for photos, 'line_horizontal' or 'line_vertical' for decorative lines."
                 />
                 <select
                   value={field.type}
                   onChange={e => updateField(index, { type: e.target.value })}
                   style={styles.input}
                 >
-                  {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  {FIELD_TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
                 </select>
               </div>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Placeholder" 
-                  tooltip="Example text shown in the input field before the user enters a value. Helps guide users on what to enter (e.g., 'Enter student name...')."
-                />
-                <input
-                  type="text"
-                  value={field.placeholder}
-                  onChange={e => updateField(index, { placeholder: e.target.value })}
-                  style={styles.input}
-                  placeholder="e.g., Enter name..."
-                />
-              </div>
+              {!field.type.startsWith('line_') && (
+                <div style={styles.formGroup}>
+                  <LabelWithInfo 
+                    label="Placeholder" 
+                    tooltip="Example text shown in the input field before the user enters a value. Helps guide users on what to enter (e.g., 'Enter student name...')."
+                  />
+                  <input
+                    type="text"
+                    value={field.placeholder}
+                    onChange={e => updateField(index, { placeholder: e.target.value })}
+                    style={styles.input}
+                    placeholder="e.g., Enter name..."
+                  />
+                </div>
+              )}
             </div>
 
             <div style={styles.sectionLabel}>Position <InfoIcon tooltip="Controls where this field appears on the certificate. X is horizontal position (left/right), Y is vertical position (top/bottom). Values are in pixels from the top-left corner." /></div>
@@ -433,7 +446,7 @@ export default function TemplateBuilder() {
               <div style={styles.formGroup}>
                 <LabelWithInfo 
                   label="X Position (px)" 
-                  tooltip="Horizontal position from the left edge. For centered text, use half the template width (e.g., 528 for a 1056px wide certificate)."
+                  tooltip="Horizontal position from the left edge. For centered elements, use half the template width (e.g., 528 for a 1056px wide certificate)."
                 />
                 <input
                   type="number"
@@ -445,7 +458,7 @@ export default function TemplateBuilder() {
               <div style={styles.formGroup}>
                 <LabelWithInfo 
                   label="Y Position (px)" 
-                  tooltip="Vertical position from the top edge. Lower values place the field higher on the certificate. Space fields 50-80px apart for readability."
+                  tooltip="Vertical position from the top edge. Lower values place the element higher on the certificate. Space elements 50-80px apart for readability."
                 />
                 <input
                   type="number"
@@ -456,73 +469,134 @@ export default function TemplateBuilder() {
               </div>
             </div>
 
-            <div style={styles.sectionLabel}>Font Settings <InfoIcon tooltip="Controls how the text appears on the certificate. Larger fonts (36-48px) work well for names, smaller fonts (18-24px) for dates and details." /></div>
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Font Family" 
-                  tooltip="The typeface for this field. Georgia and Times New Roman are classic/formal, Arial and Helvetica are modern/clean, Roboto is contemporary."
-                />
-                <select
-                  value={field.font.family}
-                  onChange={e => updateFieldFont(index, 'family', e.target.value)}
-                  style={styles.input}
-                >
-                  {FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </div>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Size (px)" 
-                  tooltip="Font size in pixels. Recommended: 36-48px for recipient names, 24-32px for titles, 16-20px for dates and small text."
-                />
-                <input
-                  type="number"
-                  value={field.font.size}
-                  onChange={e => updateFieldFont(index, 'size', parseInt(e.target.value) || 12)}
-                  style={styles.input}
-                  min={8}
-                  max={120}
-                />
-              </div>
-            </div>
-
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Font Weight" 
-                  tooltip="Text thickness. 'bold' for emphasis (names, titles), 'normal' for regular text (dates, details), 'lighter' for subtle text."
-                />
-                <select
-                  value={field.font.weight}
-                  onChange={e => updateFieldFont(index, 'weight', e.target.value)}
-                  style={styles.input}
-                >
-                  {FONT_WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
-                </select>
-              </div>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Color" 
-                  tooltip="Text color. Dark colors (#333333, #1a1a1a) for main text, accent colors for highlights. Click the color box or enter a hex code."
-                />
-                <div style={styles.colorInputWrapper}>
-                  <input
-                    type="color"
-                    value={field.font.color}
-                    onChange={e => updateFieldFont(index, 'color', e.target.value)}
-                    style={styles.colorInput}
-                  />
-                  <input
-                    type="text"
-                    value={field.font.color}
-                    onChange={e => updateFieldFont(index, 'color', e.target.value)}
-                    style={styles.colorText}
-                    placeholder="#333333"
-                  />
+            {field.type.startsWith('line_') ? (
+              <>
+                <div style={styles.sectionLabel}>Line Settings <InfoIcon tooltip="Configure the appearance of this decorative line. Adjust length, thickness, and color to match your design." /></div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <LabelWithInfo 
+                      label="Length (px)" 
+                      tooltip="The length of the line in pixels. For signature lines, 150-250px works well. For decorative dividers, try 300-500px."
+                    />
+                    <input
+                      type="number"
+                      value={field.line?.width || 200}
+                      onChange={e => updateFieldLine(index, 'width', parseInt(e.target.value) || 200)}
+                      style={styles.input}
+                      min={10}
+                      max={1000}
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <LabelWithInfo 
+                      label="Thickness (px)" 
+                      tooltip="The thickness of the line in pixels. Use 1-2px for subtle lines, 3-5px for visible dividers, 6+ for bold decorative elements."
+                    />
+                    <input
+                      type="number"
+                      value={field.line?.height || 2}
+                      onChange={e => updateFieldLine(index, 'height', parseInt(e.target.value) || 2)}
+                      style={styles.input}
+                      min={1}
+                      max={20}
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <LabelWithInfo 
+                      label="Line Color" 
+                      tooltip="The color of the line. Match your theme colors or use subtle grays for understated dividers."
+                    />
+                    <div style={styles.colorInputWrapper}>
+                      <input
+                        type="color"
+                        value={field.line?.color || '#333333'}
+                        onChange={e => updateFieldLine(index, 'color', e.target.value)}
+                        style={styles.colorInput}
+                      />
+                      <input
+                        type="text"
+                        value={field.line?.color || '#333333'}
+                        onChange={e => updateFieldLine(index, 'color', e.target.value)}
+                        style={styles.colorText}
+                        placeholder="#333333"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={styles.sectionLabel}>Font Settings <InfoIcon tooltip="Controls how the text appears on the certificate. Larger fonts (36-48px) work well for names, smaller fonts (18-24px) for dates and details." /></div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <LabelWithInfo 
+                      label="Font Family" 
+                      tooltip="The typeface for this field. Georgia and Times New Roman are classic/formal, Arial and Helvetica are modern/clean, Roboto is contemporary."
+                    />
+                    <select
+                      value={field.font.family}
+                      onChange={e => updateFieldFont(index, 'family', e.target.value)}
+                      style={styles.input}
+                    >
+                      {FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <LabelWithInfo 
+                      label="Size (px)" 
+                      tooltip="Font size in pixels. Recommended: 36-48px for recipient names, 24-32px for titles, 16-20px for dates and small text."
+                    />
+                    <input
+                      type="number"
+                      value={field.font.size}
+                      onChange={e => updateFieldFont(index, 'size', parseInt(e.target.value) || 12)}
+                      style={styles.input}
+                      min={8}
+                      max={120}
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <LabelWithInfo 
+                      label="Font Weight" 
+                      tooltip="Text thickness. 'bold' for emphasis (names, titles), 'normal' for regular text (dates, details), 'lighter' for subtle text."
+                    />
+                    <select
+                      value={field.font.weight}
+                      onChange={e => updateFieldFont(index, 'weight', e.target.value)}
+                      style={styles.input}
+                    >
+                      {FONT_WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <LabelWithInfo 
+                      label="Color" 
+                      tooltip="Text color. Dark colors (#333333, #1a1a1a) for main text, accent colors for highlights. Click the color box or enter a hex code."
+                    />
+                    <div style={styles.colorInputWrapper}>
+                      <input
+                        type="color"
+                        value={field.font.color}
+                        onChange={e => updateFieldFont(index, 'color', e.target.value)}
+                        style={styles.colorInput}
+                      />
+                      <input
+                        type="text"
+                        value={field.font.color}
+                        onChange={e => updateFieldFont(index, 'color', e.target.value)}
+                        style={styles.colorText}
+                        placeholder="#333333"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -830,97 +904,76 @@ export default function TemplateBuilder() {
             overflow: 'hidden',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
           }}>
-            {!layout.background_url && (
+            {fields.length === 0 && !layout.background_url && (
               <div style={{
                 position: 'absolute',
-                top: 0, left: 0, right: 0, bottom: 0,
-                background: `linear-gradient(135deg, ${colors.border}22 0%, ${colors.primary}11 100%)`,
-                borderTop: `${8 * scale}px solid ${colors.primary}`,
-                borderBottom: `${8 * scale}px solid ${colors.primary}`
-              }} />
-            )}
-            
-            <div style={{
-              position: 'absolute',
-              top: 30 * scale,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              textAlign: 'center',
-              width: '80%'
-            }}>
-              <div style={{
-                fontSize: Math.max(8, 14 * scale),
-                color: colors.primary,
-                fontFamily: formStyles.global_font_family,
-                textTransform: 'uppercase',
-                letterSpacing: 2 * scale,
-                marginBottom: 8 * scale
-              }}>
-                {type === 'badge' ? 'Badge of' : 'Certificate of'}
-              </div>
-              <div style={{
-                fontSize: Math.max(10, 20 * scale),
-                fontWeight: 'bold',
-                color: colors.secondary,
-                fontFamily: formStyles.global_font_family
-              }}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </div>
-            </div>
-
-            {fields.map((field, idx) => (
-              <div
-                key={idx}
-                style={{
-                  position: 'absolute',
-                  left: field.position.x * scale,
-                  top: field.position.y * scale,
-                  transform: 'translateX(-50%)',
-                  fontSize: Math.max(6, field.font.size * scale),
-                  color: field.font.color,
-                  fontFamily: field.font.family,
-                  fontWeight: field.font.weight as any,
-                  whiteSpace: 'nowrap',
-                  textAlign: 'center'
-                }}
-              >
-                [{field.label || field.key || `Field ${idx + 1}`}]
-              </div>
-            ))}
-
-            {meta.signature_block.show && type === 'certificate' && (
-              <div style={{
-                position: 'absolute',
-                bottom: 60 * scale,
+                top: '50%',
                 left: '50%',
-                transform: 'translateX(-50%)',
+                transform: 'translate(-50%, -50%)',
                 textAlign: 'center',
-                borderTop: `1px solid ${colors.primary}`,
-                paddingTop: 8 * scale,
-                minWidth: 120 * scale
+                color: '#999',
+                fontSize: Math.max(8, 12 * scale)
               }}>
-                <div style={{ fontSize: Math.max(6, 10 * scale), color: colors.primary, fontFamily: formStyles.global_font_family }}>
-                  {meta.signature_block.name || 'Signatory Name'}
-                </div>
-                <div style={{ fontSize: Math.max(5, 8 * scale), color: '#666', fontStyle: 'italic' }}>
-                  {meta.signature_block.designation || 'Designation'}
-                </div>
+                <div style={{ marginBottom: 8 }}>Empty Template</div>
+                <div style={{ fontSize: Math.max(6, 10 * scale) }}>Add fields to see them here</div>
               </div>
             )}
 
-            {meta.issued_by_label && (
-              <div style={{
-                position: 'absolute',
-                bottom: 20 * scale,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                fontSize: Math.max(5, 8 * scale),
-                color: colors.primary,
-                fontFamily: formStyles.global_font_family
-              }}>
-                Issued by {meta.issued_by_label}
-              </div>
-            )}
+            {fields.map((field, idx) => {
+              if (field.type === 'line_horizontal') {
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      position: 'absolute',
+                      left: field.position.x * scale,
+                      top: field.position.y * scale,
+                      transform: 'translateX(-50%)',
+                      width: (field.line?.width || 200) * scale,
+                      height: (field.line?.height || 2) * scale,
+                      backgroundColor: field.line?.color || '#333333'
+                    }}
+                    title={field.label || field.key || 'Horizontal Line'}
+                  />
+                );
+              }
+              if (field.type === 'line_vertical') {
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      position: 'absolute',
+                      left: field.position.x * scale,
+                      top: field.position.y * scale,
+                      transform: 'translateX(-50%)',
+                      width: (field.line?.height || 2) * scale,
+                      height: (field.line?.width || 200) * scale,
+                      backgroundColor: field.line?.color || '#333333'
+                    }}
+                    title={field.label || field.key || 'Vertical Line'}
+                  />
+                );
+              }
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    position: 'absolute',
+                    left: field.position.x * scale,
+                    top: field.position.y * scale,
+                    transform: 'translateX(-50%)',
+                    fontSize: Math.max(6, field.font.size * scale),
+                    color: field.font.color,
+                    fontFamily: field.font.family,
+                    fontWeight: field.font.weight as any,
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center'
+                  }}
+                >
+                  [{field.label || field.key || `Field ${idx + 1}`}]
+                </div>
+              );
+            })}
           </div>
           
           <div style={styles.previewMeta}>

@@ -89,8 +89,11 @@ A comprehensive 5-step wizard for creating templates with full schema customizat
 ### Step 2: Fields Editor
 - Dynamic add/remove/reorder fields
 - Each field includes: key, label, type, placeholder
+- Field types: text, date, number, textarea, image, line_horizontal, line_vertical
 - Position settings: x, y coordinates (pixels)
-- Font settings: family, size, weight, color
+- Font settings: family, size, weight, color (for text fields)
+- Line settings: length, thickness, color (for line fields)
+- Info icons with tooltips on all inputs to guide users
 
 ### Step 3: Layout Settings
 - Background image URL
@@ -110,10 +113,10 @@ A comprehensive 5-step wizard for creating templates with full schema customizat
 - Final validation before creation
 
 ### Live Preview Panel
+- Starts completely plain/blank (no default content)
 - Real-time visualization of template as configured
-- Shows fields at their positions
-- Applies color theme styling
-- Displays signature block for certificates
+- Shows fields at their positions with labels
+- Renders horizontal/vertical lines with proper dimensions
 - Shows dimensions and field count
 
 ## Recent Changes (Dec 5, 2024)
