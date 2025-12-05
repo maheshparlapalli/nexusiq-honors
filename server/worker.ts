@@ -323,14 +323,14 @@ function generateCertificateHtml(honor: any, template: any): string {
       const pngKey = `certificates/${honorId}.png`;
       
       console.log('Uploading to S3...');
-      const pdfUrl = await uploadBuffer(pdfBuffer, pdfKey, 'application/pdf');
-      const imgUrl = await uploadBuffer(pngBuffer, pngKey, 'image/png');
+      await uploadBuffer(pdfBuffer, pdfKey, 'application/pdf');
+      await uploadBuffer(pngBuffer, pngKey, 'image/png');
       
       await Honor.findByIdAndUpdate(honorId, { 
-        assets: { pdf_url: pdfUrl, image_url: imgUrl }
+        assets: { pdf_key: pdfKey, image_key: pngKey }
       });
       
-      console.log('Assets uploaded for honor', honorId, '- PDF:', pdfUrl);
+      console.log('Assets uploaded for honor', honorId, '- PDF key:', pdfKey);
     } catch (error) {
       console.error('Error processing honor', honorId, error);
       throw error;

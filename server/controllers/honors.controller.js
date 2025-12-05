@@ -2,6 +2,20 @@ import Honor from '../models/Honor.js';
 import { v4 as uuidv4 } from 'uuid';
 import { agenda } from '../agenda.js';
 import Template from '../models/Template.js';
+import { getSignedUrl } from '../services/s3.service.js';
+
+function addSignedUrls(honor) {
+  if (!honor) return honor;
+  const result = { ...honor };
+  if (result.assets) {
+    result.assets = {
+      ...result.assets,
+      pdf_url: result.assets.pdf_key ? getSignedUrl(result.assets.pdf_key) : null,
+      image_url: result.assets.image_key ? getSignedUrl(result.assets.image_key) : null
+    };
+  }
+  return result;
+}
 
 export async function issueHonor(req, res){
   try {
@@ -54,7 +68,7 @@ export async function publicView(req, res){
     const slug = req.params.slug;
     const honor = await Honor.findOne({ public_slug: slug }).lean();
     if(!honor) return res.status(404).json({ success:false, message: 'Not found' });
-    return res.json({ success:true, data: honor });
+    return res.json({ success:true, data: addSignedUrls(honor) });
   } catch(err){
     console.error(err);
     return res.status(500).json({ success:false, message: err.message });
@@ -67,8 +81,9 @@ export async function downloadHonor(req, res){
     const type = req.query.type || 'pdf';
     const honor = await Honor.findById(id).lean();
     if(!honor) return res.status(404).json({ success:false, message: 'Not found' });
-    if(type === 'image') return res.json({ success:true, url: honor.assets?.image_url });
-    return res.json({ success:true, url: honor.assets?.pdf_url });
+    const key = type === 'image' ? honor.assets?.image_key : honor.assets?.pdf_key;
+    const url = key ? getSignedUrl(key) : null;
+    return res.json({ success:true, url });
   } catch(err){
     console.error(err);
     return res.status(500).json({ success:false, message: err.message });
@@ -80,7 +95,7 @@ export async function myHonors(req, res){
     const email = req.query.email;
     if(!email) return res.status(400).json({ success:false, message: 'Provide email in query for dev' });
     const honors = await Honor.find({ 'recipient.email': email }).lean();
-    return res.json({ success:true, data: honors });
+    return res.json({ success:true, data: honors.map(addSignedUrls) });
   } catch(err){
     console.error(err);
     return res.status(500).json({ success:false, message: err.message });
@@ -92,7 +107,7 @@ export async function listHonors(req, res){
   try {
     const q = req.query || {};
     const honors = await Honor.find(q).limit(100).lean();
-    return res.json({ success:true, data: honors });
+    return res.json({ success:true, data: honors.map(addSignedUrls) });
   } catch(err){
     console.error(err);
     return res.status(500).json({ success:false, message: err.message });

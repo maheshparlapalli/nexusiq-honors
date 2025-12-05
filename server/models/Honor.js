@@ -43,7 +43,7 @@ const HonorSchema = new Schema({
   },
   template_id: { type: String, required: true },
   template_version: { type: Number, required: true },
-  assets: { pdf_url: String, image_url: String, qr_url: String },
+  assets: { pdf_key: String, image_key: String, pdf_url: String, image_url: String, qr_url: String },
   issue_mode: { type: String, enum: ['auto','manual','bulk','rule_based'], default: 'manual' },
   issued_by: String,
   metadata: { type: Schema.Types.Mixed, default: {} },
