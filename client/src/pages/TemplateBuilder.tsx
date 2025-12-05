@@ -95,7 +95,7 @@ export default function TemplateBuilder() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   function updateLayout(key: string, value: any) {
     setFormData(prev => ({
@@ -199,14 +199,14 @@ export default function TemplateBuilder() {
     }
     if (formData.fields.length === 0) {
       setError('Please add at least one field');
-      setStep(2);
+      setStep(3);
       return;
     }
     
     const emptyFields = formData.fields.filter(f => !f.key.trim() || !f.label.trim());
     if (emptyFields.length > 0) {
       setError('All fields must have a key and label. Please complete all field information.');
-      setStep(2);
+      setStep(3);
       return;
     }
     
@@ -214,7 +214,7 @@ export default function TemplateBuilder() {
     const duplicateKeys = keys.filter((key, index) => keys.indexOf(key) !== index);
     if (duplicateKeys.length > 0) {
       setError(`Duplicate field keys found: ${[...new Set(duplicateKeys)].join(', ')}. Each field must have a unique key.`);
-      setStep(2);
+      setStep(3);
       return;
     }
 
@@ -238,7 +238,7 @@ export default function TemplateBuilder() {
   }
 
   function renderStepIndicator() {
-    const steps = ['Basic Info', 'Fields', 'Layout', 'Styles', 'Review'];
+    const steps = ['Basic Info', 'Layout & Styles', 'Fields', 'Review'];
     return (
       <div style={styles.stepIndicator}>
         {steps.map((label, i) => (
@@ -356,11 +356,145 @@ export default function TemplateBuilder() {
     );
   }
 
-  function renderStep2() {
+  function renderLayoutAndStyles() {
+    return (
+      <div style={styles.stepContent}>
+        <h3 style={styles.stepTitle}>Layout & Styles</h3>
+
+        <div style={styles.section}>
+          <h4 style={styles.sectionTitle}>Layout Settings</h4>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Background Image URL</label>
+            <input
+              type="text"
+              value={formData.layout.background_url}
+              onChange={e => updateLayout('background_url', e.target.value)}
+              style={styles.input}
+              placeholder="https://example.com/background.png"
+            />
+            <small style={styles.helpText}>Enter a URL to your background image or leave empty for plain background</small>
+          </div>
+
+          <div style={styles.formRow}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Width (px)</label>
+              <input
+                type="number"
+                value={formData.layout.width}
+                onChange={e => updateLayout('width', parseInt(e.target.value) || 1056)}
+                style={styles.input}
+                min={200}
+                max={2000}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Height (px)</label>
+              <input
+                type="number"
+                value={formData.layout.height}
+                onChange={e => updateLayout('height', parseInt(e.target.value) || 816)}
+                style={styles.input}
+                min={200}
+                max={2000}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Orientation</label>
+              <select
+                value={formData.layout.orientation}
+                onChange={e => updateLayout('orientation', e.target.value)}
+                style={styles.input}
+              >
+                {ORIENTATIONS.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.section}>
+          <h4 style={styles.sectionTitle}>Global Styles</h4>
+          <div style={styles.formRow}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Global Font Family</label>
+              <select
+                value={formData.styles.global_font_family}
+                onChange={e => updateStyles('global_font_family', e.target.value)}
+                style={styles.input}
+              >
+                {FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Color Theme</label>
+              <select
+                value={formData.styles.color_theme}
+                onChange={e => updateStyles('color_theme', e.target.value)}
+                style={styles.input}
+              >
+                {COLOR_THEMES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.section}>
+          <h4 style={styles.sectionTitle}>Meta Settings</h4>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Issued By Label</label>
+            <input
+              type="text"
+              value={formData.meta.issued_by_label}
+              onChange={e => updateMeta('issued_by_label', e.target.value)}
+              style={styles.input}
+              placeholder="e.g., NexSAA Academy"
+            />
+          </div>
+
+          <div style={styles.formRow}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Default Expiry (months)</label>
+              <input
+                type="number"
+                value={formData.meta.default_expiry_months || ''}
+                onChange={e => updateMeta('default_expiry_months', e.target.value ? parseInt(e.target.value) : null)}
+                style={styles.input}
+                placeholder="Leave empty for no expiry"
+                min={1}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>&nbsp;</label>
+              <label style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={formData.meta.allow_expiry_override}
+                  onChange={e => updateMeta('allow_expiry_override', e.target.checked)}
+                />
+                Allow Expiry Override
+              </label>
+            </div>
+          </div>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Seal Image URL</label>
+            <input
+              type="text"
+              value={formData.meta.seal_url}
+              onChange={e => updateMeta('seal_url', e.target.value)}
+              style={styles.input}
+              placeholder="https://example.com/seal.png"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderFieldsStep() {
     return (
       <div style={styles.stepContent}>
         <h3 style={styles.stepTitle}>Template Fields</h3>
-        <p style={styles.helpText}>Define the dynamic fields that will be populated when issuing certificates.</p>
+        <p style={styles.helpText}>Define the dynamic fields that will be populated when issuing certificates. Everything on the certificate (title, name, date, decorative lines, etc.) should be added as fields.</p>
 
         <button onClick={addField} style={styles.addBtn}>+ Add Field</button>
 
@@ -603,221 +737,7 @@ export default function TemplateBuilder() {
     );
   }
 
-  function renderStep3() {
-    return (
-      <div style={styles.stepContent}>
-        <h3 style={styles.stepTitle}>Layout Settings</h3>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Background Image URL</label>
-          <input
-            type="text"
-            value={formData.layout.background_url}
-            onChange={e => updateLayout('background_url', e.target.value)}
-            style={styles.input}
-            placeholder="https://example.com/background.png or /templates/bg.png"
-          />
-          <small style={styles.helpText}>Enter a URL to your background image or leave empty for default styling</small>
-        </div>
-
-        <div style={styles.formRow}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Width (px)</label>
-            <input
-              type="number"
-              value={formData.layout.width}
-              onChange={e => updateLayout('width', parseInt(e.target.value) || 1056)}
-              style={styles.input}
-              min={200}
-              max={2000}
-            />
-          </div>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Height (px)</label>
-            <input
-              type="number"
-              value={formData.layout.height}
-              onChange={e => updateLayout('height', parseInt(e.target.value) || 816)}
-              style={styles.input}
-              min={200}
-              max={2000}
-            />
-          </div>
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Orientation</label>
-          <select
-            value={formData.layout.orientation}
-            onChange={e => updateLayout('orientation', e.target.value)}
-            style={styles.input}
-          >
-            {ORIENTATIONS.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
-          </select>
-        </div>
-
-        <div style={styles.previewBox}>
-          <h4>Layout Preview</h4>
-          <div style={{
-            width: Math.min(formData.layout.width / 3, 300),
-            height: Math.min(formData.layout.height / 3, 250),
-            border: '2px solid #1a365d',
-            backgroundColor: '#f8f9fa',
-            backgroundImage: formData.layout.background_url ? `url(${formData.layout.background_url})` : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#666',
-            fontSize: 12
-          }}>
-            {formData.layout.width} x {formData.layout.height}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function renderStep4() {
-    return (
-      <div style={styles.stepContent}>
-        <h3 style={styles.stepTitle}>Styles & Meta Settings</h3>
-
-        <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Global Styles</h4>
-          <div style={styles.formRow}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Global Font Family</label>
-              <select
-                value={formData.styles.global_font_family}
-                onChange={e => updateStyles('global_font_family', e.target.value)}
-                style={styles.input}
-              >
-                {FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Color Theme</label>
-              <select
-                value={formData.styles.color_theme}
-                onChange={e => updateStyles('color_theme', e.target.value)}
-                style={styles.input}
-              >
-                {COLOR_THEMES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Certificate Settings</h4>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Issued By Label</label>
-            <input
-              type="text"
-              value={formData.meta.issued_by_label}
-              onChange={e => updateMeta('issued_by_label', e.target.value)}
-              style={styles.input}
-              placeholder="e.g., NexSAA Academy"
-            />
-          </div>
-
-          <div style={styles.formRow}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Default Expiry (months)</label>
-              <input
-                type="number"
-                value={formData.meta.default_expiry_months || ''}
-                onChange={e => updateMeta('default_expiry_months', e.target.value ? parseInt(e.target.value) : null)}
-                style={styles.input}
-                placeholder="Leave empty for no expiry"
-                min={1}
-              />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>&nbsp;</label>
-              <label style={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={formData.meta.allow_expiry_override}
-                  onChange={e => updateMeta('allow_expiry_override', e.target.checked)}
-                />
-                Allow Expiry Override
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Signature Block</h4>
-          <div style={styles.formGroup}>
-            <label style={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={formData.meta.signature_block.show}
-                onChange={e => updateSignatureBlock('show', e.target.checked)}
-              />
-              Show Signature Block on Certificate
-            </label>
-          </div>
-
-          {formData.meta.signature_block.show && (
-            <>
-              <div style={styles.formRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Signatory Name</label>
-                  <input
-                    type="text"
-                    value={formData.meta.signature_block.name}
-                    onChange={e => updateSignatureBlock('name', e.target.value)}
-                    style={styles.input}
-                    placeholder="e.g., Dr. John Smith"
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Designation</label>
-                  <input
-                    type="text"
-                    value={formData.meta.signature_block.designation}
-                    onChange={e => updateSignatureBlock('designation', e.target.value)}
-                    style={styles.input}
-                    placeholder="e.g., Director of Education"
-                  />
-                </div>
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Signature Image URL</label>
-                <input
-                  type="text"
-                  value={formData.meta.signature_block.signature_url}
-                  onChange={e => updateSignatureBlock('signature_url', e.target.value)}
-                  style={styles.input}
-                  placeholder="https://example.com/signature.png"
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Seal</h4>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Seal Image URL</label>
-            <input
-              type="text"
-              value={formData.meta.seal_url}
-              onChange={e => updateMeta('seal_url', e.target.value)}
-              style={styles.input}
-              placeholder="https://example.com/seal.png"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function renderStep5() {
+  function renderReviewStep() {
     return (
       <div style={styles.stepContent}>
         <h3 style={styles.stepTitle}>Review & Create</h3>
@@ -1003,10 +923,9 @@ export default function TemplateBuilder() {
         <div style={styles.mainLayout}>
           <div style={styles.formContainer}>
             {step === 1 && renderStep1()}
-            {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
-            {step === 4 && renderStep4()}
-            {step === 5 && renderStep5()}
+            {step === 2 && renderLayoutAndStyles()}
+            {step === 3 && renderFieldsStep()}
+            {step === 4 && renderReviewStep()}
           </div>
           
           {renderLivePreview()}

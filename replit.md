@@ -80,13 +80,18 @@ Run `npm run seed` to populate the database with sample data:
 - **Template Preview** (`/preview/:id`): Preview a specific template
 
 ## Template Builder
-A comprehensive 5-step wizard for creating templates with full schema customization:
+A comprehensive 4-step wizard for creating templates with full schema customization:
 
 ### Step 1: Basic Information
 - Template name, type (certificate/badge), category (course/exam/participation/custom)
 - Active status toggle
 
-### Step 2: Fields Editor
+### Step 2: Layout & Styles
+- Background image URL, width, height, orientation
+- Global font family and color theme
+- Meta settings: issued by label, expiry, seal URL
+
+### Step 3: Fields Editor
 - Dynamic add/remove/reorder fields
 - Each field includes: key, label, type, placeholder
 - Field types: text, date, number, textarea, image, line_horizontal, line_vertical
@@ -95,20 +100,7 @@ A comprehensive 5-step wizard for creating templates with full schema customizat
 - Line settings: length, thickness, color (for line fields)
 - Info icons with tooltips on all inputs to guide users
 
-### Step 3: Layout Settings
-- Background image URL
-- Width and height (pixels)
-- Orientation (landscape/portrait/square)
-- Live preview of layout
-
-### Step 4: Styles & Meta
-- Global font family and color theme
-- Issued by label
-- Expiry settings (months, allow override)
-- Signature block (show/hide, name, designation, signature URL)
-- Seal URL
-
-### Step 5: Review
+### Step 4: Review
 - Summary of all configured settings
 - Final validation before creation
 
