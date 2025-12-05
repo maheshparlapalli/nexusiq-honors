@@ -60,6 +60,10 @@ externalPort = 3000
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 45443
+externalPort = 3001
+
 [deployment]
 deploymentTarget = "vm"
 run = ["bash", "-c", "node dist/worker.js & node dist/index.js"]
