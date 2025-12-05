@@ -1,4 +1,4 @@
-# NexSAA Honors - Full Boilerplate
+# NexSAA Honors
 
 Single package.json (NexEditor-style). Run `npm install` then `npm run dev`.
 
