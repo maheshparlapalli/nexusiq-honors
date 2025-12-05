@@ -1,0 +1,1 @@
+export const EVENT_TYPES = { COURSE: 1, EXAM: 2, PARTICIPATION: 3, CUSTOM: 4 } as const;

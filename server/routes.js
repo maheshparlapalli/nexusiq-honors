@@ -1,0 +1,9 @@
+import express from 'express';
+import honorsRoutes from './routes/honors.routes.js';
+import templatesRoutes from './routes/templates.routes.js';
+import recipientsRoutes from './routes/recipients.routes.js';
+const router = express.Router();
+router.use('/v1/honors', honorsRoutes);
+router.use('/v1/templates', templatesRoutes);
+router.use('/v1/recipients', recipientsRoutes);
+export default router;

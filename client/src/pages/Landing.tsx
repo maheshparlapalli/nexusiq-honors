@@ -1,0 +1,1 @@
+export default function Landing(){ return <div><h1>NexSAA Honors</h1><p>Public certificate viewer and wallet.</p></div>; }

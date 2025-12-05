@@ -1,0 +1,1 @@
+export function fmtDate(d?: string){ if(!d) return ''; return new Date(d).toLocaleDateString(); }

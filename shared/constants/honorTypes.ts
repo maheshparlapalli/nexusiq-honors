@@ -1,0 +1,1 @@
+export const HONOR_TYPES = { CERTIFICATE: 1, BADGE: 2 } as const;
