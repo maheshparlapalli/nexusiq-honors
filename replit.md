@@ -54,6 +54,22 @@ Configured for VM deployment:
 - Build step compiles both frontend and backend
 - Production runs MongoDB, worker process, and main server
 
+## Database Seeding
+Run `npm run seed` to populate the database with sample data:
+- **8 Templates**: One for each combination of honor type and event type
+- **16 Honors**: 2 sample certificates/badges for each template
+- **8 Recipients**: Sample recipient profiles
+
+### Honor Types
+- CERTIFICATE (1): Full certificates with signature blocks and seals
+- BADGE (2): Compact digital badges
+
+### Event Types
+- COURSE (1): Course completion certificates/badges
+- EXAM (2): Exam achievement certificates/badges
+- PARTICIPATION (3): Event participation certificates/badges
+- CUSTOM (4): Custom achievement certificates/badges
+
 ## Recent Changes (Dec 5, 2024)
 - Migrated from GitHub to Replit environment
 - Created Vite configuration with proper host settings (0.0.0.0:5000) for Replit proxy
@@ -64,6 +80,7 @@ Configured for VM deployment:
 - Created unified startup script for all services
 - Configured deployment settings for production
 - Updated TypeScript config to support JSX
+- Added database seeding script with sample templates and certificates
 
 ## Notes
 - The application uses AWS S3 for storing certificate PDFs and images - users need to configure their own S3 credentials
