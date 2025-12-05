@@ -99,7 +99,12 @@ The following environment variables are configured:
 - `AWS_REGION`: eu-north-1
 - `AWS_S3_BUCKET`: nexsaaportal
 
-Certificates are stored at: `https://nexsaaportal.s3.eu-north-1.amazonaws.com/certificates/`
+### Signed URLs
+Certificate assets use **signed S3 URLs** for secure access:
+- Database stores S3 object keys (e.g., `certificates/{id}.pdf`)
+- API generates signed URLs on-the-fly with **10-minute expiry**
+- No public bucket access required - all access is authenticated
+- URLs are regenerated on each request for security
 
 ## Notes
 - PDF generation uses Puppeteer with system-installed Chromium
