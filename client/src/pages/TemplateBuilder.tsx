@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { useLocation } from 'wouter';
 
@@ -18,6 +18,8 @@ interface TemplateFormData {
   category: string;
   layout: {
     background_url: string;
+    background_size: string;
+    background_position: string;
     width: number;
     height: number;
     orientation: string;
@@ -48,6 +50,8 @@ const INITIAL_FORM_DATA: TemplateFormData = {
   category: 'course',
   layout: {
     background_url: '',
+    background_size: 'cover',
+    background_position: 'center',
     width: 1056,
     height: 816,
     orientation: 'landscape'
@@ -87,6 +91,8 @@ const FONT_FAMILIES = ['Georgia', 'Arial', 'Times New Roman', 'Helvetica', 'Robo
 const FONT_WEIGHTS = ['normal', 'bold', 'lighter'];
 const ORIENTATIONS = ['landscape', 'portrait', 'square'];
 const COLOR_THEMES = ['classic-blue', 'achievement-gold', 'event-purple', 'custom-teal', 'professional-navy', 'modern-green'];
+const BACKGROUND_SIZES = ['cover', 'contain', 'auto', '100% 100%', '100% auto', 'auto 100%'];
+const BACKGROUND_POSITIONS = ['center', 'top', 'bottom', 'left', 'right', 'top left', 'top right', 'bottom left', 'bottom right'];
 
 export default function TemplateBuilder() {
   const [, setLocation] = useLocation();
@@ -94,8 +100,45 @@ export default function TemplateBuilder() {
   const [formData, setFormData] = useState<TemplateFormData>(INITIAL_FORM_DATA);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const totalSteps = 4;
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a PNG, JPG, or WebP image');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('folder', 'templates/backgrounds');
+
+      const response = await axios.post('/api/v1/upload', formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      updateLayout('background_url', response.data.url);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   function updateLayout(key: string, value: any) {
     setFormData(prev => ({
@@ -362,19 +405,7 @@ export default function TemplateBuilder() {
         <h3 style={styles.stepTitle}>Layout & Styles</h3>
 
         <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Layout Settings</h4>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Background Image URL</label>
-            <input
-              type="text"
-              value={formData.layout.background_url}
-              onChange={e => updateLayout('background_url', e.target.value)}
-              style={styles.input}
-              placeholder="https://example.com/background.png"
-            />
-            <small style={styles.helpText}>Enter a URL to your background image or leave empty for plain background</small>
-          </div>
-
+          <h4 style={styles.sectionTitle}>Dimensions</h4>
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Width (px)</label>
@@ -409,6 +440,90 @@ export default function TemplateBuilder() {
               </select>
             </div>
           </div>
+        </div>
+
+        <div style={styles.section}>
+          <h4 style={styles.sectionTitle}>Background Image</h4>
+          
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Upload Background</label>
+            <div style={styles.uploadArea}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                style={{ display: 'none' }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={styles.uploadBtn}
+                disabled={uploading}
+              >
+                {uploading ? 'Uploading...' : 'Choose Image'}
+              </button>
+              <span style={styles.uploadHint}>PNG, JPG, WebP (max 5MB)</span>
+            </div>
+          </div>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Or Enter Image URL</label>
+            <input
+              type="text"
+              value={formData.layout.background_url}
+              onChange={e => updateLayout('background_url', e.target.value)}
+              style={styles.input}
+              placeholder="https://example.com/background.png"
+            />
+          </div>
+
+          {formData.layout.background_url && (
+            <>
+              <div style={styles.formRow}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Background Size</label>
+                  <select
+                    value={formData.layout.background_size}
+                    onChange={e => updateLayout('background_size', e.target.value)}
+                    style={styles.input}
+                  >
+                    {BACKGROUND_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Background Position</label>
+                  <select
+                    value={formData.layout.background_position}
+                    onChange={e => updateLayout('background_position', e.target.value)}
+                    style={styles.input}
+                  >
+                    {BACKGROUND_POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+              
+              <div style={styles.bgPreview}>
+                <div style={{
+                  width: 200,
+                  height: 150,
+                  backgroundImage: `url(${formData.layout.background_url})`,
+                  backgroundSize: formData.layout.background_size,
+                  backgroundPosition: formData.layout.background_position,
+                  backgroundRepeat: 'no-repeat',
+                  border: '1px solid #ddd',
+                  borderRadius: 4
+                }} />
+                <button
+                  type="button"
+                  onClick={() => updateLayout('background_url', '')}
+                  style={styles.removeBtn}
+                >
+                  Remove Background
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <div style={styles.section}>
@@ -816,8 +931,9 @@ export default function TemplateBuilder() {
             height: layout.height * scale,
             backgroundColor: '#fff',
             backgroundImage: layout.background_url ? `url(${layout.background_url})` : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundSize: layout.background_size || 'cover',
+            backgroundPosition: layout.background_position || 'center',
+            backgroundRepeat: 'no-repeat',
             border: `3px solid ${colors.border}`,
             borderRadius: 8,
             position: 'relative',
@@ -1080,5 +1196,39 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 500,
     color: '#333'
+  },
+  uploadArea: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12
+  },
+  uploadBtn: {
+    padding: '10px 20px',
+    backgroundColor: '#1976D2',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 500
+  },
+  uploadHint: {
+    fontSize: 12,
+    color: '#888'
+  },
+  bgPreview: {
+    marginTop: 16,
+    display: 'flex',
+    alignItems: 'flex-end',
+    gap: 16
+  },
+  removeBtn: {
+    padding: '8px 16px',
+    backgroundColor: '#ffebee',
+    color: '#c62828',
+    border: '1px solid #ffcdd2',
+    borderRadius: 4,
+    cursor: 'pointer',
+    fontSize: 13
   }
 };
