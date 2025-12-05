@@ -5,7 +5,15 @@ A fullstack application for managing and displaying digital certificates and hon
 
 ## Project Structure
 - **client/**: React frontend application (Vite + TypeScript)
-  - `src/pages/`: Page components (Landing, PublicCertificate, MyCertificates, TemplatePreview)
+  - `src/pages/`: Page components (Landing, PublicCertificate, MyCertificates, TemplatePreview, TemplateBuilder)
+  - `src/features/`: Feature-based modules
+    - `templateBuilder/`: Modular Template Builder feature
+      - `components/steps/`: Step components (BasicInfoStep, LayoutStylesStep, FieldsStep, ReviewStep)
+      - `components/shared/`: Reusable UI components (InfoIcon, LabelWithInfo, FieldCard)
+      - `components/`: LivePreview, Stepper
+      - `hooks/`: Custom hooks (useTemplateForm, useBackgroundUpload)
+      - `utils/`: Constants, styles, validation utilities
+      - `types/`: TypeScript type definitions
   - `src/App.tsx`: Main app with Wouter routing
   - `vite.config.ts`: Vite configuration for development server
 
