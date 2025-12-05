@@ -25,6 +25,8 @@ ENABLE_DEBUG_LOGS = "false"
 
 [userenv.shared]
 MONGO_URI = "mongodb+srv://NexsaaAdmin:NexsaaMongoAdmin@nexusiq.84uid.mongodb.net/nexusiq-honors"
+AWS_REGION = "eu-north-1"
+AWS_S3_BUCKET = "nexsaaportal"
 
 [workflows]
 runButton = "Project"
@@ -57,10 +59,6 @@ externalPort = 3000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 42793
-externalPort = 3001
 
 [deployment]
 deploymentTarget = "vm"
