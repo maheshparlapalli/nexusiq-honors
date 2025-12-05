@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { uploadBuffer, getSignedUrl } from '../services/s3.service.js';
+import { uploadBuffer, getSignedUrl, deleteObject } from '../services/s3.service.js';
 import crypto from 'crypto';
 
 const router = express.Router();
@@ -38,6 +38,40 @@ router.post('/', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ message: 'Failed to upload file' });
+  }
+});
+
+router.delete('/', async (req, res) => {
+  try {
+    const { key } = req.body;
+    
+    if (!key) {
+      return res.status(400).json({ message: 'No file key provided' });
+    }
+
+    await deleteObject(key);
+    
+    res.json({ success: true, message: 'File deleted successfully' });
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({ message: 'Failed to delete file' });
+  }
+});
+
+router.post('/refresh-url', async (req, res) => {
+  try {
+    const { key } = req.body;
+    
+    if (!key) {
+      return res.status(400).json({ message: 'No file key provided' });
+    }
+
+    const url = getSignedUrl(key, 3600);
+    
+    res.json({ success: true, url });
+  } catch (error) {
+    console.error('Refresh URL error:', error);
+    res.status(500).json({ message: 'Failed to refresh URL' });
   }
 });
 

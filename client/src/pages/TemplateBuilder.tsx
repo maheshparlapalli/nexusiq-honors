@@ -12,12 +12,19 @@ interface FieldConfig {
   line?: { width: number; height: number; color: string };
 }
 
+interface BackgroundImage {
+  key: string;
+  url: string;
+  filename: string;
+}
+
 interface TemplateFormData {
   name: string;
   type: string;
   category: string;
   layout: {
     background_url: string;
+    background_key: string;
     background_size: string;
     background_position: string;
     width: number;
@@ -50,6 +57,7 @@ const INITIAL_FORM_DATA: TemplateFormData = {
   category: 'course',
   layout: {
     background_url: '',
+    background_key: '',
     background_size: 'cover',
     background_position: 'center',
     width: 1056,
@@ -101,6 +109,8 @@ export default function TemplateBuilder() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [backgroundFilename, setBackgroundFilename] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const totalSteps = 4;
@@ -132,12 +142,45 @@ export default function TemplateBuilder() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      updateLayout('background_url', response.data.url);
+      setFormData(prev => ({
+        ...prev,
+        layout: {
+          ...prev.layout,
+          background_url: response.data.url,
+          background_key: response.data.key
+        }
+      }));
+      setBackgroundFilename(response.data.filename || file.name);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to upload image');
     } finally {
       setUploading(false);
     }
+  }
+
+  async function handleRemoveBackground() {
+    const key = formData.layout.background_key;
+    
+    if (key) {
+      setRemoving(true);
+      try {
+        await axios.delete('/api/v1/upload', { data: { key } });
+      } catch (err) {
+        console.error('Failed to delete from S3:', err);
+      } finally {
+        setRemoving(false);
+      }
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      layout: {
+        ...prev.layout,
+        background_url: '',
+        background_key: ''
+      }
+    }));
+    setBackgroundFilename('');
   }
 
   function updateLayout(key: string, value: any) {
@@ -467,19 +510,15 @@ export default function TemplateBuilder() {
             </div>
           </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Or Enter Image URL</label>
-            <input
-              type="text"
-              value={formData.layout.background_url}
-              onChange={e => updateLayout('background_url', e.target.value)}
-              style={styles.input}
-              placeholder="https://example.com/background.png"
-            />
-          </div>
-
           {formData.layout.background_url && (
             <>
+              <div style={styles.uploadedIndicator}>
+                <span style={styles.checkIcon}>&#10003;</span>
+                <span style={styles.uploadedText}>
+                  {backgroundFilename || 'Background image uploaded'}
+                </span>
+              </div>
+              
               <div style={styles.formRow}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Background Size</label>
@@ -516,10 +555,11 @@ export default function TemplateBuilder() {
                 }} />
                 <button
                   type="button"
-                  onClick={() => updateLayout('background_url', '')}
+                  onClick={handleRemoveBackground}
                   style={styles.removeBtn}
+                  disabled={removing}
                 >
-                  Remove Background
+                  {removing ? 'Removing...' : 'Remove Background'}
                 </button>
               </div>
             </>
@@ -872,7 +912,7 @@ export default function TemplateBuilder() {
           <div style={styles.reviewGrid}>
             <div><strong>Size:</strong> {formData.layout.width} x {formData.layout.height}px</div>
             <div><strong>Orientation:</strong> {formData.layout.orientation}</div>
-            <div><strong>Background:</strong> {formData.layout.background_url || '(default)'}</div>
+            <div><strong>Background:</strong> {formData.layout.background_url ? (backgroundFilename || 'Custom image uploaded') : '(none)'}</div>
           </div>
         </div>
 
@@ -1230,5 +1270,25 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 4,
     cursor: 'pointer',
     fontSize: 13
+  },
+  uploadedIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 14px',
+    backgroundColor: '#e8f5e9',
+    border: '1px solid #c8e6c9',
+    borderRadius: 6,
+    marginBottom: 12
+  },
+  checkIcon: {
+    color: '#2e7d32',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  uploadedText: {
+    color: '#2e7d32',
+    fontSize: 14,
+    fontWeight: 500
   }
 };

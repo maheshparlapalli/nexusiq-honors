@@ -14,6 +14,16 @@ export async function uploadBuffer(buffer, key, contentType){
   return key;
 }
 
+export async function deleteObject(key){
+  if (!key) return false;
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET,
+    Key: key
+  };
+  await s3.deleteObject(params).promise();
+  return true;
+}
+
 export function getSignedUrl(key, expiresIn = SIGNED_URL_EXPIRY){
   if (!key) return null;
   const params = {
