@@ -6,6 +6,8 @@ interface FieldConfig {
   key: string;
   label: string;
   type: string;
+  mode: 'static' | 'dynamic';
+  staticContent: string;
   placeholder: string;
   position: { x: number; y: number };
   font: { size: number; color: string; weight: string; family: string };
@@ -88,6 +90,8 @@ const EMPTY_FIELD: FieldConfig = {
   key: '',
   label: '',
   type: 'text',
+  mode: 'static',
+  staticContent: '',
   placeholder: '',
   position: { x: 528, y: 400 },
   font: { size: 24, color: '#333333', weight: 'normal', family: 'Arial' },
@@ -292,11 +296,14 @@ export default function TemplateBuilder() {
     const isLineField = (type: string) => type === 'line_horizontal' || type === 'line_vertical';
     const emptyFields = formData.fields.filter(f => {
       if (!f.key.trim()) return true;
-      if (!isLineField(f.type) && !f.label.trim()) return true;
+      if (isLineField(f.type)) return false;
+      const mode = f.mode || 'static';
+      if (mode === 'static' && !f.staticContent?.trim()) return true;
+      if (mode === 'dynamic' && !f.placeholder?.trim()) return true;
       return false;
     });
     if (emptyFields.length > 0) {
-      setError('All fields must have a key. Non-line fields also require a label.');
+      setError('All fields must have a key. Static fields need content, dynamic fields need a placeholder.');
       setStep(3);
       return;
     }
@@ -654,7 +661,7 @@ export default function TemplateBuilder() {
     return (
       <div style={styles.stepContent}>
         <h3 style={styles.stepTitle}>Template Fields</h3>
-        <p style={styles.helpText}>Define the dynamic fields that will be populated when issuing certificates. Everything on the certificate (title, name, date, decorative lines, etc.) should be added as fields.</p>
+        <p style={styles.helpText}>Add all elements that appear on your certificate. Use <strong>Static</strong> for fixed text like "Certificate of Participation", and <strong>Dynamic</strong> for content that changes per recipient like student name or date.</p>
 
         <button onClick={addField} style={styles.addBtn}>+ Add Field</button>
 
@@ -721,19 +728,54 @@ export default function TemplateBuilder() {
               {!field.type.startsWith('line_') && (
                 <div style={styles.formGroup}>
                   <LabelWithInfo 
-                    label="Placeholder" 
-                    tooltip="Example text shown in the input field before the user enters a value. Helps guide users on what to enter (e.g., 'Enter student name...')."
+                    label="Content Mode" 
+                    tooltip="Static: Fixed text that stays the same on every certificate (e.g., 'Certificate of Participation'). Dynamic: Placeholder that gets filled with different data for each recipient (e.g., student name)."
                   />
-                  <input
-                    type="text"
-                    value={field.placeholder}
-                    onChange={e => updateField(index, { placeholder: e.target.value })}
+                  <select
+                    value={field.mode || 'static'}
+                    onChange={e => updateField(index, { mode: e.target.value as 'static' | 'dynamic' })}
                     style={styles.input}
-                    placeholder="e.g., Enter name..."
-                  />
+                  >
+                    <option value="static">Static (Fixed Text)</option>
+                    <option value="dynamic">Dynamic (Per Recipient)</option>
+                  </select>
                 </div>
               )}
             </div>
+
+            {!field.type.startsWith('line_') && (
+              <div style={styles.formRow}>
+                {(field.mode || 'static') === 'static' ? (
+                  <div style={{ ...styles.formGroup, flex: 1 }}>
+                    <LabelWithInfo 
+                      label="Static Content" 
+                      tooltip="The exact text that will appear on every certificate. This won't change per recipient."
+                    />
+                    <input
+                      type="text"
+                      value={field.staticContent || ''}
+                      onChange={e => updateField(index, { staticContent: e.target.value })}
+                      style={styles.input}
+                      placeholder="e.g., Certificate of Participation"
+                    />
+                  </div>
+                ) : (
+                  <div style={{ ...styles.formGroup, flex: 1 }}>
+                    <LabelWithInfo 
+                      label="Placeholder Text" 
+                      tooltip="Sample text shown in the preview to indicate what data will be filled. Shown in brackets like [Student Name]."
+                    />
+                    <input
+                      type="text"
+                      value={field.placeholder || ''}
+                      onChange={e => updateField(index, { placeholder: e.target.value })}
+                      style={styles.input}
+                      placeholder="e.g., Student Name"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={styles.sectionLabel}>Position <InfoIcon tooltip="Controls where this field appears on the certificate. X is horizontal position (left/right), Y is vertical position (top/bottom). Values are in pixels from the top-left corner." /></div>
             <div style={styles.formRow}>
@@ -1035,6 +1077,11 @@ export default function TemplateBuilder() {
                   />
                 );
               }
+              const isStatic = (field.mode || 'static') === 'static';
+              const displayText = isStatic 
+                ? (field.staticContent || field.label || `[Static Field ${idx + 1}]`)
+                : `[${field.placeholder || field.label || 'Dynamic Field'}]`;
+              
               return (
                 <div
                   key={idx}
@@ -1044,14 +1091,16 @@ export default function TemplateBuilder() {
                     top: field.position.y * scale,
                     transform: 'translateX(-50%)',
                     fontSize: Math.max(6, field.font.size * scale),
-                    color: field.font.color,
+                    color: isStatic ? field.font.color : '#666',
                     fontFamily: field.font.family,
                     fontWeight: field.font.weight as any,
                     whiteSpace: 'nowrap',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    fontStyle: isStatic ? 'normal' : 'italic'
                   }}
+                  title={isStatic ? 'Static: ' + (field.staticContent || field.label) : 'Dynamic: ' + (field.placeholder || field.label)}
                 >
-                  [{field.label || field.key || `Field ${idx + 1}`}]
+                  {displayText}
                 </div>
               );
             })}

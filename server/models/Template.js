@@ -4,9 +4,12 @@ const FieldSchema = new Schema({
   key: { type: String, required: true },
   label: String,
   type: String,
+  mode: { type: String, enum: ['static', 'dynamic'], default: 'static' },
+  staticContent: String,
   placeholder: String,
   position: { x: Number, y: Number },
   font: { size: Number, color: String, weight: String, family: String },
+  line: { width: Number, height: Number, color: String },
   size: Number
 }, { _id: false });
 const TemplateSchema = new Schema({
@@ -14,7 +17,15 @@ const TemplateSchema = new Schema({
   name: { type: String, required: true },
   type: { type: String, required: true },
   category: { type: String, required: true },
-  layout: { background_url: String, width: Number, height: Number, orientation: String },
+  layout: { 
+    background_url: String, 
+    background_key: String,
+    background_size: String,
+    background_position: String,
+    width: Number, 
+    height: Number, 
+    orientation: String 
+  },
   fields: [FieldSchema],
   styles: { global_font_family: String, color_theme: String },
   meta: {
