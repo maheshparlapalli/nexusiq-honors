@@ -289,9 +289,14 @@ export default function TemplateBuilder() {
       return;
     }
     
-    const emptyFields = formData.fields.filter(f => !f.key.trim() || !f.label.trim());
+    const isLineField = (type: string) => type === 'line_horizontal' || type === 'line_vertical';
+    const emptyFields = formData.fields.filter(f => {
+      if (!f.key.trim()) return true;
+      if (!isLineField(f.type) && !f.label.trim()) return true;
+      return false;
+    });
     if (emptyFields.length > 0) {
-      setError('All fields must have a key and label. Please complete all field information.');
+      setError('All fields must have a key. Non-line fields also require a label.');
       setStep(3);
       return;
     }
