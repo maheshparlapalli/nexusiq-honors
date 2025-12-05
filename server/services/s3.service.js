@@ -1,6 +1,8 @@
 import AWS from 'aws-sdk';
 const s3 = new AWS.S3({ region: process.env.AWS_REGION });
 
+const SIGNED_URL_EXPIRY = 600;
+
 export async function uploadBuffer(buffer, key, contentType){
   const params = { 
     Bucket: process.env.AWS_S3_BUCKET, 
@@ -9,7 +11,17 @@ export async function uploadBuffer(buffer, key, contentType){
     ContentType: contentType
   };
   await s3.putObject(params).promise();
-  return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  return key;
+}
+
+export function getSignedUrl(key, expiresIn = SIGNED_URL_EXPIRY){
+  if (!key) return null;
+  const params = {
+    Bucket: process.env.AWS_S3_BUCKET,
+    Key: key,
+    Expires: expiresIn
+  };
+  return s3.getSignedUrl('getObject', params);
 }
 
 export function getPublicUrl(key){ 
