@@ -154,9 +154,14 @@ export default function AllTemplates() {
     <div style={styles.container}>
       <div style={styles.headerRow}>
         <h2 style={styles.title}>All Templates</h2>
-        <button style={styles.createBtn} onClick={() => setShowModal(true)}>
-          + Create New Template
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button style={styles.createBtn} onClick={() => setShowModal(true)}>
+            + Quick Create
+          </button>
+          <Link href="/templates/new" style={styles.builderBtn}>
+            Open Template Builder
+          </Link>
+        </div>
       </div>
       
       <div style={styles.filters}>
@@ -567,5 +572,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13
   },
   date: { color: '#999' },
-  empty: { textAlign: 'center', padding: 40, color: '#666' }
+  empty: { textAlign: 'center', padding: 40, color: '#666' },
+  builderBtn: {
+    padding: '10px 20px',
+    backgroundColor: '#1976D2',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 600,
+    textDecoration: 'none',
+    display: 'inline-block'
+  }
 };

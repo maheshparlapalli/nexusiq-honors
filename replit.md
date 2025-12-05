@@ -73,10 +73,48 @@ Run `npm run seed` to populate the database with sample data:
 ## Frontend Pages
 - **Home** (`/`): Landing page
 - **All Certificates** (`/certificates`): View all certificates and badges with filtering
-- **All Templates** (`/templates`): View all templates with filtering
+- **All Templates** (`/templates`): View all templates with filtering + Quick Create modal
+- **Template Builder** (`/templates/new`): Comprehensive multi-step template creation wizard
 - **My Certificates** (`/my-certificates`): User's personal certificates (by email)
 - **Public Certificate** (`/c/:slug`): Public shareable certificate view
 - **Template Preview** (`/preview/:id`): Preview a specific template
+
+## Template Builder
+A comprehensive 5-step wizard for creating templates with full schema customization:
+
+### Step 1: Basic Information
+- Template name, type (certificate/badge), category (course/exam/participation/custom)
+- Active status toggle
+
+### Step 2: Fields Editor
+- Dynamic add/remove/reorder fields
+- Each field includes: key, label, type, placeholder
+- Position settings: x, y coordinates (pixels)
+- Font settings: family, size, weight, color
+
+### Step 3: Layout Settings
+- Background image URL
+- Width and height (pixels)
+- Orientation (landscape/portrait/square)
+- Live preview of layout
+
+### Step 4: Styles & Meta
+- Global font family and color theme
+- Issued by label
+- Expiry settings (months, allow override)
+- Signature block (show/hide, name, designation, signature URL)
+- Seal URL
+
+### Step 5: Review
+- Summary of all configured settings
+- Final validation before creation
+
+### Live Preview Panel
+- Real-time visualization of template as configured
+- Shows fields at their positions
+- Applies color theme styling
+- Displays signature block for certificates
+- Shows dimensions and field count
 
 ## Recent Changes (Dec 5, 2024)
 - Migrated from GitHub to Replit environment

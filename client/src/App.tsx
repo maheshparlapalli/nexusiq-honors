@@ -6,6 +6,7 @@ import MyCertificates from './pages/MyCertificates';
 import TemplatePreview from './pages/TemplatePreview';
 import AllCertificates from './pages/AllCertificates';
 import AllTemplates from './pages/AllTemplates';
+import TemplateBuilder from './pages/TemplateBuilder';
 
 export default function App(){
   return (
@@ -30,6 +31,7 @@ export default function App(){
         <Route path="/preview/:id">
           {params => <TemplatePreview params={params} />}
         </Route>
+        <Route path="/templates/new" component={TemplateBuilder} />
       </div>
     </Router>
   );
