@@ -1,11 +1,15 @@
 import mongoose from 'mongoose';
 import { randomUUID } from 'crypto';
 import dotenv from 'dotenv';
+import Agenda from 'agenda';
 
 dotenv.config();
 
 const HONOR_TYPES = { CERTIFICATE: 1, BADGE: 2 };
 const EVENT_TYPES = { COURSE: 1, EXAM: 2, PARTICIPATION: 3, CUSTOM: 4 };
+
+const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/nexusiq-honors';
+const agenda = new Agenda({ db: { address: mongoUri, collection: 'agendaJobs' } });
 
 const FieldSchema = new mongoose.Schema({
   key: { type: String, required: true },
@@ -495,16 +499,19 @@ async function seed() {
         honor.badge = badge;
       }
 
-      await Honor.create(honor);
+      const createdHonor = await Honor.create(honor);
       honorCount++;
+      
+      await agenda.schedule('in 1 second', 'generate-assets', { honorId: createdHonor._id.toString() });
       
       const honorTypeLabel = honorType === HONOR_TYPES.CERTIFICATE ? 'Certificate' : 'Badge';
       const eventTypeLabel = Object.keys(EVENT_TYPES).find(k => EVENT_TYPES[k] === eventType);
-      console.log(`  Created ${honorTypeLabel} for ${recipient.name} (${eventTypeLabel})`);
+      console.log(`  Created ${honorTypeLabel} for ${recipient.name} (${eventTypeLabel}) - Job queued`);
     }
   }
 
   console.log(`\nCreated ${honorCount} honors total`);
+  console.log('PDF/Image generation jobs have been queued for all honors');
 
   console.log('\n--- Seed Summary ---');
   const templateCount = await Template.countDocuments({ client_id: CLIENT_ID });
@@ -529,11 +536,22 @@ async function seed() {
     console.log(`${name}: ${count}`);
   }
 
+  console.log('\nNote: The worker process will generate PDFs and upload to S3.');
+  console.log('Make sure the worker is running: npm run worker or via the workflow');
+  
+  await agenda.stop();
   await mongoose.connection.close();
   console.log('\nDatabase connection closed. Seeding complete!');
 }
 
-seed().catch(err => {
-  console.error('Seeding failed:', err);
-  process.exit(1);
-});
+async function run() {
+  try {
+    await agenda.start();
+    await seed();
+  } catch (err) {
+    console.error('Seeding failed:', err);
+    process.exit(1);
+  }
+}
+
+run();

@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["mongodb"]
+packages = ["mongodb", "unzip", "glib", "nss", "nspr", "at-spi2-atk", "cups", "libdrm", "libxkbcommon", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXfixes", "xorg.libXrandr", "mesa", "expat", "xorg.libxcb", "xorg.libX11", "pango", "cairo", "alsa-lib", "gtk3", "chromium"]
 
 [userenv]
 
@@ -61,7 +61,7 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 42073
+localPort = 32909
 externalPort = 3001
 
 [deployment]

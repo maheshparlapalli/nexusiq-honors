@@ -70,20 +70,39 @@ Run `npm run seed` to populate the database with sample data:
 - PARTICIPATION (3): Event participation certificates/badges
 - CUSTOM (4): Custom achievement certificates/badges
 
+## Frontend Pages
+- **Home** (`/`): Landing page
+- **All Certificates** (`/certificates`): View all certificates and badges with filtering
+- **All Templates** (`/templates`): View all templates with filtering
+- **My Certificates** (`/my-certificates`): User's personal certificates (by email)
+- **Public Certificate** (`/c/:slug`): Public shareable certificate view
+- **Template Preview** (`/preview/:id`): Preview a specific template
+
 ## Recent Changes (Dec 5, 2024)
 - Migrated from GitHub to Replit environment
 - Created Vite configuration with proper host settings (0.0.0.0:5000) for Replit proxy
 - Updated backend to bind to localhost to avoid port conflicts
-- Installed MongoDB system package
 - Fixed React routing to use proper Wouter Route components
 - Configured environment variables for development
 - Created unified startup script for all services
 - Configured deployment settings for production
-- Updated TypeScript config to support JSX
 - Added database seeding script with sample templates and certificates
+- Added All Certificates and All Templates pages with filtering
+- Configured PDF generation with Puppeteer using system Chromium
+- Integrated AWS S3 for certificate PDF and image storage
+- Seeding now auto-generates PDFs and uploads to S3
+
+## AWS S3 Configuration
+The following environment variables are configured:
+- `AWS_ACCESS_KEY_ID`: (stored as secret)
+- `AWS_SECRET_ACCESS_KEY`: (stored as secret)
+- `AWS_REGION`: eu-north-1
+- `AWS_S3_BUCKET`: nexsaaportal
+
+Certificates are stored at: `https://nexsaaportal.s3.eu-north-1.amazonaws.com/certificates/`
 
 ## Notes
-- The application uses AWS S3 for storing certificate PDFs and images - users need to configure their own S3 credentials
-- Puppeteer is used for generating certificate PDFs from templates
+- PDF generation uses Puppeteer with system-installed Chromium
 - The worker process (Agenda) handles background jobs for certificate generation
 - MongoDB Atlas is used as the cloud database
+- S3 bucket should have appropriate bucket policy for public read access to certificates
