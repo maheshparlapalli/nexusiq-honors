@@ -4,3 +4,63 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
+packages = ["mongodb"]
+
+[userenv]
+
+[userenv.development]
+PORT = "4005"
+NODE_ENV = "development"
+MONGO_URI = "mongodb://localhost:27017/nexsaa_honors_dev"
+HONORS_PUBLIC_URL = "http://localhost:4005"
+PUBLIC_VIEW_BASE_PATH = "/api/v1/honors/public"
+HONOR_SLUG_LENGTH = "8"
+WORKER_CONCURRENCY = "3"
+AGENDA_COLLECTION = "agendaJobs"
+AGENDA_POOL_TIME = "5000"
+PUPPETEER_TIMEOUT = "60000"
+JWT_SECRET = "dev-secret-change-in-production"
+JWT_EXPIRY = "7d"
+LOG_LEVEL = "info"
+ENABLE_DEBUG_LOGS = "false"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash start-dev.sh"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 4005
+externalPort = 3000
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 39873
+externalPort = 3001
+
+[deployment]
+deploymentTarget = "vm"
+run = ["bash", "-c", "mkdir -p /home/runner/mongodb-data && (mongod --dbpath /home/runner/mongodb-data --bind_ip localhost --port 27017 --fork --logpath /home/runner/mongodb.log 2>/dev/null || mongod --dbpath /home/runner/mongodb-data --bind_ip localhost --port 27017 &) && sleep 3 && node dist/worker.js & node dist/index.js"]
+build = ["npm", "run", "build"]

@@ -11,7 +11,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const PORT = process.env.PORT || 4005;
+const PORT = parseInt(process.env.PORT || '4005');
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/nexsaa_honors_dev';
 
 mongoose.connect(MONGO_URI).then(()=> console.log('MongoDB connected')).catch(err=> console.error(err));
@@ -19,4 +19,4 @@ mongoose.connect(MONGO_URI).then(()=> console.log('MongoDB connected')).catch(er
 app.use('/api', routes);
 
 app.get('/', (req,res)=> res.send('NexSAA Honors API running'));
-app.listen(PORT, ()=> console.log(`Server running on ${PORT}`));
+app.listen(PORT, 'localhost', ()=> console.log(`Server running on localhost:${PORT}`));
