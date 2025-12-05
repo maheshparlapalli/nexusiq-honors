@@ -11,7 +11,6 @@ packages = ["mongodb"]
 [userenv.development]
 PORT = "4005"
 NODE_ENV = "development"
-MONGO_URI = "mongodb://localhost:27017/nexsaa_honors_dev"
 HONORS_PUBLIC_URL = "http://localhost:4005"
 PUBLIC_VIEW_BASE_PATH = "/api/v1/honors/public"
 HONOR_SLUG_LENGTH = "8"
@@ -23,6 +22,9 @@ JWT_SECRET = "dev-secret-change-in-production"
 JWT_EXPIRY = "7d"
 LOG_LEVEL = "info"
 ENABLE_DEBUG_LOGS = "false"
+
+[userenv.shared]
+MONGO_URI = "mongodb+srv://NexsaaAdmin:NexsaaMongoAdmin@nexusiq.84uid.mongodb.net/nexusiq-honors"
 
 [workflows]
 runButton = "Project"
@@ -62,5 +64,5 @@ externalPort = 3001
 
 [deployment]
 deploymentTarget = "vm"
-run = ["bash", "-c", "mkdir -p /home/runner/mongodb-data && (mongod --dbpath /home/runner/mongodb-data --bind_ip localhost --port 27017 --fork --logpath /home/runner/mongodb.log 2>/dev/null || mongod --dbpath /home/runner/mongodb-data --bind_ip localhost --port 27017 &) && sleep 3 && node dist/worker.js & node dist/index.js"]
+run = ["bash", "-c", "node dist/worker.js & node dist/index.js"]
 build = ["npm", "run", "build"]

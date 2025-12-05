@@ -36,9 +36,9 @@ A fullstack application for managing and displaying digital certificates and hon
 5. The `start-dev.sh` script orchestrates all services
 
 ## Environment Variables
-Required environment variables are configured in the development environment:
+Required environment variables are configured:
 - `PORT`: Backend server port (4005)
-- `MONGO_URI`: MongoDB connection string
+- `MONGO_URI`: MongoDB Atlas connection string (configured)
 - `AWS_S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`: S3 credentials (need user configuration)
 - `HONORS_PUBLIC_URL`: Base URL for public certificate links
 - Various other settings for worker, Puppeteer, JWT, etc.
@@ -69,4 +69,4 @@ Configured for VM deployment:
 - The application uses AWS S3 for storing certificate PDFs and images - users need to configure their own S3 credentials
 - Puppeteer is used for generating certificate PDFs from templates
 - The worker process (Agenda) handles background jobs for certificate generation
-- MongoDB data is stored in `/home/runner/mongodb-data`
+- MongoDB Atlas is used as the cloud database

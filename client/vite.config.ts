@@ -15,14 +15,7 @@ export default defineConfig({
         changeOrigin: true
       }
     },
-    hmr: process.env.REPL_SLUG ? {
-      port: 443,
-      protocol: 'wss',
-      host: `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-    } : {
-      protocol: 'ws',
-      host: 'localhost'
-    }
+    hmr: true
   },
   preview: {
     host: '0.0.0.0',
