@@ -47,10 +47,15 @@ export default function AllTemplates() {
     name: '',
     type: 'certificate',
     category: 'course',
+    issuedByLabel: 'NexSAA Academy',
     signatureName: '',
     signatureDesignation: '',
     showSignature: true,
-    expiryMonths: ''
+    expiryMonths: '',
+    allowExpiryOverride: false,
+    fontFamily: 'Georgia',
+    colorTheme: '',
+    active: true
   });
 
   useEffect(() => {
@@ -93,13 +98,13 @@ export default function AllTemplates() {
         },
         fields: DEFAULT_FIELDS[formData.category] || DEFAULT_FIELDS.custom,
         styles: {
-          global_font_family: isBadge ? 'Arial' : 'Georgia',
-          color_theme: `${formData.category}-${formData.type}`
+          global_font_family: formData.fontFamily || (isBadge ? 'Arial' : 'Georgia'),
+          color_theme: formData.colorTheme || `${formData.category}-${formData.type}`
         },
         meta: {
           default_expiry_months: formData.expiryMonths ? parseInt(formData.expiryMonths) : null,
-          allow_expiry_override: !!formData.expiryMonths,
-          issued_by_label: 'NexSAA Academy',
+          allow_expiry_override: formData.allowExpiryOverride,
+          issued_by_label: formData.issuedByLabel || 'NexSAA Academy',
           signature_block: {
             show: formData.showSignature && !isBadge,
             signature_url: '/signatures/default.png',
@@ -109,7 +114,7 @@ export default function AllTemplates() {
           seal_url: '/seals/nexsaa-seal.png'
         },
         version: 1,
-        active: true
+        active: formData.active
       };
 
       await axios.post('/api/v1/templates', templateData);
@@ -118,10 +123,15 @@ export default function AllTemplates() {
         name: '',
         type: 'certificate',
         category: 'course',
+        issuedByLabel: 'NexSAA Academy',
         signatureName: '',
         signatureDesignation: '',
         showSignature: true,
-        expiryMonths: ''
+        expiryMonths: '',
+        allowExpiryOverride: false,
+        fontFamily: 'Georgia',
+        colorTheme: '',
+        active: true
       });
       fetchTemplates();
     } catch (err: any) {
@@ -221,15 +231,73 @@ export default function AllTemplates() {
               </div>
               
               <div style={styles.formGroup}>
-                <label style={styles.label}>Expiry (months, leave empty for no expiry)</label>
+                <label style={styles.label}>Issued By Label</label>
                 <input
-                  type="number"
-                  value={formData.expiryMonths}
-                  onChange={e => setFormData({...formData, expiryMonths: e.target.value})}
+                  type="text"
+                  value={formData.issuedByLabel}
+                  onChange={e => setFormData({...formData, issuedByLabel: e.target.value})}
                   style={styles.input}
-                  placeholder="e.g., 12"
-                  min="1"
+                  placeholder="e.g., NexSAA Academy"
                 />
+              </div>
+              
+              <div style={styles.formRow}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Font Family</label>
+                  <select
+                    value={formData.fontFamily}
+                    onChange={e => setFormData({...formData, fontFamily: e.target.value})}
+                    style={styles.input}
+                  >
+                    <option value="Georgia">Georgia (Classic)</option>
+                    <option value="Arial">Arial (Modern)</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Roboto">Roboto</option>
+                  </select>
+                </div>
+                
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Color Theme</label>
+                  <select
+                    value={formData.colorTheme}
+                    onChange={e => setFormData({...formData, colorTheme: e.target.value})}
+                    style={styles.input}
+                  >
+                    <option value="">Auto (based on category)</option>
+                    <option value="classic-blue">Classic Blue</option>
+                    <option value="achievement-gold">Achievement Gold</option>
+                    <option value="event-purple">Event Purple</option>
+                    <option value="custom-teal">Custom Teal</option>
+                    <option value="professional-navy">Professional Navy</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div style={styles.formRow}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Default Expiry (months)</label>
+                  <input
+                    type="number"
+                    value={formData.expiryMonths}
+                    onChange={e => setFormData({...formData, expiryMonths: e.target.value})}
+                    style={styles.input}
+                    placeholder="Leave empty for no expiry"
+                    min="1"
+                  />
+                </div>
+                
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>&nbsp;</label>
+                  <label style={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={formData.allowExpiryOverride}
+                      onChange={e => setFormData({...formData, allowExpiryOverride: e.target.checked})}
+                    />
+                    Allow Expiry Override
+                  </label>
+                </div>
               </div>
               
               {formData.type === 'certificate' && (
@@ -272,6 +340,17 @@ export default function AllTemplates() {
                   )}
                 </>
               )}
+              
+              <div style={styles.formGroup}>
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={formData.active}
+                    onChange={e => setFormData({...formData, active: e.target.checked})}
+                  />
+                  Template Active (can be used to issue certificates)
+                </label>
+              </div>
               
               <div style={styles.modalActions}>
                 <button 
