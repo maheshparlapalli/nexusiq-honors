@@ -93,7 +93,10 @@ A comprehensive 4-step wizard for creating templates with full schema customizat
 
 ### Step 3: Fields Editor
 - Dynamic add/remove/reorder fields
-- Each field includes: key, label, type, placeholder
+- Each field includes: key, label, type, mode (static/dynamic)
+- **Content Mode**:
+  - **Static**: Fixed text that appears the same on every certificate (e.g., "Certificate of Participation")
+  - **Dynamic**: Placeholder for data that changes per recipient (e.g., Student Name, Date)
 - Field types: text, date, number, textarea, image, line_horizontal, line_vertical
 - Position settings: x, y coordinates (pixels)
 - Font settings: family, size, weight, color (for text fields)
@@ -107,7 +110,8 @@ A comprehensive 4-step wizard for creating templates with full schema customizat
 ### Live Preview Panel
 - Starts completely plain/blank (no default content)
 - Real-time visualization of template as configured
-- Shows fields at their positions with labels
+- Static fields show actual content as it will appear
+- Dynamic fields show placeholder in brackets (e.g., [Student Name]) with italic styling
 - Renders horizontal/vertical lines with proper dimensions
 - Shows dimensions and field count
 
