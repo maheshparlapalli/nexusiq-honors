@@ -319,6 +319,32 @@ export default function TemplateBuilder() {
     );
   }
 
+  function InfoIcon({ tooltip }: { tooltip: string }) {
+    const [showTooltip, setShowTooltip] = useState(false);
+    return (
+      <span 
+        style={styles.infoIcon}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        onClick={() => setShowTooltip(!showTooltip)}
+      >
+        ⓘ
+        {showTooltip && (
+          <span style={styles.tooltip}>{tooltip}</span>
+        )}
+      </span>
+    );
+  }
+
+  function LabelWithInfo({ label, tooltip }: { label: string; tooltip: string }) {
+    return (
+      <label style={styles.labelWithInfo}>
+        {label}
+        <InfoIcon tooltip={tooltip} />
+      </label>
+    );
+  }
+
   function renderStep2() {
     return (
       <div style={styles.stepContent}>
@@ -346,7 +372,10 @@ export default function TemplateBuilder() {
 
             <div style={styles.formRow}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Key (identifier)</label>
+                <LabelWithInfo 
+                  label="Key (identifier)" 
+                  tooltip="A unique identifier for this field used in the system (e.g., recipient_name, course_title). Use lowercase with underscores, no spaces."
+                />
                 <input
                   type="text"
                   value={field.key}
@@ -356,7 +385,10 @@ export default function TemplateBuilder() {
                 />
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Label</label>
+                <LabelWithInfo 
+                  label="Label" 
+                  tooltip="The display name shown to users when filling out the certificate. This is the human-readable version of the key (e.g., 'Recipient Name', 'Course Title')."
+                />
                 <input
                   type="text"
                   value={field.label}
@@ -369,7 +401,10 @@ export default function TemplateBuilder() {
 
             <div style={styles.formRow}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Field Type</label>
+                <LabelWithInfo 
+                  label="Field Type" 
+                  tooltip="The type of data this field accepts: 'text' for names/titles, 'date' for dates, 'number' for scores/grades, 'textarea' for longer text, 'image' for photos."
+                />
                 <select
                   value={field.type}
                   onChange={e => updateField(index, { type: e.target.value })}
@@ -379,7 +414,10 @@ export default function TemplateBuilder() {
                 </select>
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Placeholder</label>
+                <LabelWithInfo 
+                  label="Placeholder" 
+                  tooltip="Example text shown in the input field before the user enters a value. Helps guide users on what to enter (e.g., 'Enter student name...')."
+                />
                 <input
                   type="text"
                   value={field.placeholder}
@@ -390,10 +428,13 @@ export default function TemplateBuilder() {
               </div>
             </div>
 
-            <div style={styles.sectionLabel}>Position</div>
+            <div style={styles.sectionLabel}>Position <InfoIcon tooltip="Controls where this field appears on the certificate. X is horizontal position (left/right), Y is vertical position (top/bottom). Values are in pixels from the top-left corner." /></div>
             <div style={styles.formRow}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>X Position (px)</label>
+                <LabelWithInfo 
+                  label="X Position (px)" 
+                  tooltip="Horizontal position from the left edge. For centered text, use half the template width (e.g., 528 for a 1056px wide certificate)."
+                />
                 <input
                   type="number"
                   value={field.position.x}
@@ -402,7 +443,10 @@ export default function TemplateBuilder() {
                 />
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Y Position (px)</label>
+                <LabelWithInfo 
+                  label="Y Position (px)" 
+                  tooltip="Vertical position from the top edge. Lower values place the field higher on the certificate. Space fields 50-80px apart for readability."
+                />
                 <input
                   type="number"
                   value={field.position.y}
@@ -412,10 +456,13 @@ export default function TemplateBuilder() {
               </div>
             </div>
 
-            <div style={styles.sectionLabel}>Font Settings</div>
+            <div style={styles.sectionLabel}>Font Settings <InfoIcon tooltip="Controls how the text appears on the certificate. Larger fonts (36-48px) work well for names, smaller fonts (18-24px) for dates and details." /></div>
             <div style={styles.formRow}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Font Family</label>
+                <LabelWithInfo 
+                  label="Font Family" 
+                  tooltip="The typeface for this field. Georgia and Times New Roman are classic/formal, Arial and Helvetica are modern/clean, Roboto is contemporary."
+                />
                 <select
                   value={field.font.family}
                   onChange={e => updateFieldFont(index, 'family', e.target.value)}
@@ -425,7 +472,10 @@ export default function TemplateBuilder() {
                 </select>
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Size (px)</label>
+                <LabelWithInfo 
+                  label="Size (px)" 
+                  tooltip="Font size in pixels. Recommended: 36-48px for recipient names, 24-32px for titles, 16-20px for dates and small text."
+                />
                 <input
                   type="number"
                   value={field.font.size}
@@ -439,7 +489,10 @@ export default function TemplateBuilder() {
 
             <div style={styles.formRow}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Font Weight</label>
+                <LabelWithInfo 
+                  label="Font Weight" 
+                  tooltip="Text thickness. 'bold' for emphasis (names, titles), 'normal' for regular text (dates, details), 'lighter' for subtle text."
+                />
                 <select
                   value={field.font.weight}
                   onChange={e => updateFieldFont(index, 'weight', e.target.value)}
@@ -449,7 +502,10 @@ export default function TemplateBuilder() {
                 </select>
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Color</label>
+                <LabelWithInfo 
+                  label="Color" 
+                  tooltip="Text color. Dark colors (#333333, #1a1a1a) for main text, accent colors for highlights. Click the color box or enter a hex code."
+                />
                 <div style={styles.colorInputWrapper}>
                   <input
                     type="color"
@@ -1013,5 +1069,44 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 12, 
     fontSize: 12, 
     color: '#666' 
+  },
+  infoIcon: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 16,
+    height: 16,
+    marginLeft: 6,
+    fontSize: 12,
+    color: '#1976D2',
+    cursor: 'pointer',
+    position: 'relative',
+    verticalAlign: 'middle'
+  },
+  tooltip: {
+    position: 'absolute',
+    bottom: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: '#333',
+    color: '#fff',
+    padding: '10px 14px',
+    borderRadius: 6,
+    fontSize: 12,
+    lineHeight: 1.5,
+    width: 260,
+    textAlign: 'left',
+    zIndex: 1000,
+    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+    marginBottom: 8,
+    fontWeight: 'normal'
+  },
+  labelWithInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: 500,
+    color: '#333'
   }
 };
