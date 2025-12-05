@@ -1,318 +1,97 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useLocation } from 'wouter';
+import {
+  TemplateFormData,
+  useTemplateForm,
+  useBackgroundUpload,
+  validateTemplate,
+  BasicInfoStep,
+  LayoutStylesStep,
+  FieldsStep,
+  ReviewStep,
+  Stepper,
+  LivePreview,
+  styles
+} from '../features/templateBuilder';
 
-interface FieldConfig {
-  key: string;
-  label: string;
-  type: string;
-  mode: 'static' | 'dynamic';
-  staticContent: string;
-  placeholder: string;
-  position: { x: number; y: number };
-  font: { size: number; color: string; weight: string; family: string };
-  line?: { width: number; height: number; color: string };
-}
-
-interface BackgroundImage {
-  key: string;
-  url: string;
-  filename: string;
-}
-
-interface TemplateFormData {
-  name: string;
-  type: string;
-  category: string;
-  layout: {
-    background_url: string;
-    background_key: string;
-    background_size: string;
-    background_position: string;
-    width: number;
-    height: number;
-    orientation: string;
-  };
-  fields: FieldConfig[];
-  styles: {
-    global_font_family: string;
-    color_theme: string;
-  };
-  meta: {
-    default_expiry_months: number | null;
-    allow_expiry_override: boolean;
-    issued_by_label: string;
-    signature_block: {
-      show: boolean;
-      signature_url: string;
-      name: string;
-      designation: string;
-    };
-    seal_url: string;
-  };
-  active: boolean;
-}
-
-const INITIAL_FORM_DATA: TemplateFormData = {
-  name: '',
-  type: 'certificate',
-  category: 'course',
-  layout: {
-    background_url: '',
-    background_key: '',
-    background_size: 'cover',
-    background_position: 'center',
-    width: 1056,
-    height: 816,
-    orientation: 'landscape'
-  },
-  fields: [],
-  styles: {
-    global_font_family: 'Georgia',
-    color_theme: 'classic-blue'
-  },
-  meta: {
-    default_expiry_months: null,
-    allow_expiry_override: false,
-    issued_by_label: 'NexSAA Academy',
-    signature_block: {
-      show: true,
-      signature_url: '',
-      name: '',
-      designation: ''
-    },
-    seal_url: ''
-  },
-  active: true
-};
-
-const EMPTY_FIELD: FieldConfig = {
-  key: '',
-  label: '',
-  type: 'text',
-  mode: 'static',
-  staticContent: '',
-  placeholder: '',
-  position: { x: 528, y: 400 },
-  font: { size: 24, color: '#333333', weight: 'normal', family: 'Arial' },
-  line: { width: 200, height: 2, color: '#333333' }
-};
-
-const FIELD_TYPES = ['text', 'date', 'number', 'textarea', 'image', 'line_horizontal', 'line_vertical'];
-const FONT_FAMILIES = ['Georgia', 'Arial', 'Times New Roman', 'Helvetica', 'Roboto', 'Verdana', 'Courier New'];
-const FONT_WEIGHTS = ['normal', 'bold', 'lighter'];
-const ORIENTATIONS = ['landscape', 'portrait', 'square'];
-const COLOR_THEMES = ['classic-blue', 'achievement-gold', 'event-purple', 'custom-teal', 'professional-navy', 'modern-green'];
-const BACKGROUND_SIZES = ['cover', 'contain', 'auto', '100% 100%', '100% auto', 'auto 100%'];
-const BACKGROUND_POSITIONS = ['center', 'top', 'bottom', 'left', 'right', 'top left', 'top right', 'bottom left', 'bottom right'];
+const STEPS = ['Basic Info', 'Layout & Styles', 'Fields', 'Review'];
 
 export default function TemplateBuilder() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState<TemplateFormData>(INITIAL_FORM_DATA);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const [backgroundFilename, setBackgroundFilename] = useState<string>('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const totalSteps = 4;
+  const {
+    formData,
+    setFormData,
+    updateLayout,
+    updateStyles,
+    updateMeta,
+    updateSignatureBlock,
+    addField,
+    updateField,
+    updateFieldPosition,
+    updateFieldLine,
+    removeField,
+    moveField
+  } = useTemplateForm();
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const {
+    uploading,
+    removing,
+    backgroundFilename,
+    fileInputRef,
+    handleFileUpload,
+    handleRemoveBackground,
+    setBackgroundFilename
+  } = useBackgroundUpload();
 
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      setError('Please upload a PNG, JPG, or WebP image');
-      return;
-    }
+  function handleNext() {
+    if (step < STEPS.length) setStep(step + 1);
+  }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB');
-      return;
-    }
+  function handlePrev() {
+    if (step > 1) setStep(step - 1);
+  }
 
-    setUploading(true);
-    setError(null);
+  function onFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    handleFileUpload(
+      e,
+      (url, key, filename) => {
+        setFormData(prev => ({
+          ...prev,
+          layout: {
+            ...prev.layout,
+            background_url: url,
+            background_key: key
+          }
+        }));
+      },
+      (message) => setError(message)
+    );
+  }
 
-    try {
-      const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
-      formDataUpload.append('folder', 'templates/backgrounds');
-
-      const response = await axios.post('/api/v1/upload', formDataUpload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
+  function onRemoveBackground() {
+    handleRemoveBackground(formData.layout.background_key, () => {
       setFormData(prev => ({
         ...prev,
         layout: {
           ...prev.layout,
-          background_url: response.data.url,
-          background_key: response.data.key
+          background_url: '',
+          background_key: ''
         }
       }));
-      setBackgroundFilename(response.data.filename || file.name);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to upload image');
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function handleRemoveBackground() {
-    const key = formData.layout.background_key;
-    
-    if (key) {
-      setRemoving(true);
-      try {
-        await axios.delete('/api/v1/upload', { data: { key } });
-      } catch (err) {
-        console.error('Failed to delete from S3:', err);
-      } finally {
-        setRemoving(false);
-      }
-    }
-    
-    setFormData(prev => ({
-      ...prev,
-      layout: {
-        ...prev.layout,
-        background_url: '',
-        background_key: ''
-      }
-    }));
+    });
     setBackgroundFilename('');
   }
 
-  function updateLayout(key: string, value: any) {
-    setFormData(prev => ({
-      ...prev,
-      layout: { ...prev.layout, [key]: value }
-    }));
-  }
-
-  function updateStyles(key: string, value: any) {
-    setFormData(prev => ({
-      ...prev,
-      styles: { ...prev.styles, [key]: value }
-    }));
-  }
-
-  function updateMeta(key: string, value: any) {
-    setFormData(prev => ({
-      ...prev,
-      meta: { ...prev.meta, [key]: value }
-    }));
-  }
-
-  function updateSignatureBlock(key: string, value: any) {
-    setFormData(prev => ({
-      ...prev,
-      meta: {
-        ...prev.meta,
-        signature_block: { ...prev.meta.signature_block, [key]: value }
-      }
-    }));
-  }
-
-  function addField() {
-    const newField = { 
-      ...EMPTY_FIELD, 
-      key: `field_${formData.fields.length + 1}`,
-      position: { x: 528, y: 300 + (formData.fields.length * 60) }
-    };
-    setFormData(prev => ({
-      ...prev,
-      fields: [...prev.fields, newField]
-    }));
-  }
-
-  function updateField(index: number, updates: Partial<FieldConfig>) {
-    setFormData(prev => ({
-      ...prev,
-      fields: prev.fields.map((f, i) => i === index ? { ...f, ...updates } : f)
-    }));
-  }
-
-  function updateFieldPosition(index: number, axis: 'x' | 'y', value: number) {
-    setFormData(prev => ({
-      ...prev,
-      fields: prev.fields.map((f, i) => 
-        i === index ? { ...f, position: { ...f.position, [axis]: value } } : f
-      )
-    }));
-  }
-
-  function updateFieldFont(index: number, key: string, value: any) {
-    setFormData(prev => ({
-      ...prev,
-      fields: prev.fields.map((f, i) => 
-        i === index ? { ...f, font: { ...f.font, [key]: value } } : f
-      )
-    }));
-  }
-
-  function updateFieldLine(index: number, key: string, value: any) {
-    setFormData(prev => ({
-      ...prev,
-      fields: prev.fields.map((f, i) => 
-        i === index ? { ...f, line: { ...(f.line || { width: 200, height: 2, color: '#333333' }), [key]: value } } : f
-      )
-    }));
-  }
-
-  function removeField(index: number) {
-    setFormData(prev => ({
-      ...prev,
-      fields: prev.fields.filter((_, i) => i !== index)
-    }));
-  }
-
-  function moveField(index: number, direction: 'up' | 'down') {
-    if ((direction === 'up' && index === 0) || 
-        (direction === 'down' && index === formData.fields.length - 1)) return;
-    
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    const newFields = [...formData.fields];
-    [newFields[index], newFields[newIndex]] = [newFields[newIndex], newFields[index]];
-    setFormData(prev => ({ ...prev, fields: newFields }));
-  }
-
   async function handleSubmit() {
-    if (!formData.name.trim()) {
-      setError('Please enter a template name');
-      setStep(1);
-      return;
-    }
-    if (formData.fields.length === 0) {
-      setError('Please add at least one field');
-      setStep(3);
-      return;
-    }
-    
-    const isLineField = (type: string) => type === 'line_horizontal' || type === 'line_vertical';
-    const emptyFields = formData.fields.filter(f => {
-      if (!f.key.trim()) return true;
-      if (isLineField(f.type)) return false;
-      const mode = f.mode || 'static';
-      if (mode === 'static' && !f.staticContent?.trim()) return true;
-      if (mode === 'dynamic' && !f.placeholder?.trim()) return true;
-      return false;
-    });
-    if (emptyFields.length > 0) {
-      setError('All fields must have a key. Static fields need content, dynamic fields need a placeholder.');
-      setStep(3);
-      return;
-    }
-    
-    const keys = formData.fields.map(f => f.key.trim().toLowerCase());
-    const duplicateKeys = keys.filter((key, index) => keys.indexOf(key) !== index);
-    if (duplicateKeys.length > 0) {
-      setError(`Duplicate field keys found: ${[...new Set(duplicateKeys)].join(', ')}. Each field must have a unique key.`);
-      setStep(3);
+    const validation = validateTemplate(formData);
+    if (!validation.valid) {
+      setError(validation.error);
+      setStep(validation.step);
       return;
     }
 
@@ -335,1014 +114,103 @@ export default function TemplateBuilder() {
     }
   }
 
-  function renderStepIndicator() {
-    const steps = ['Basic Info', 'Layout & Styles', 'Fields', 'Review'];
-    return (
-      <div style={styles.stepIndicator}>
-        {steps.map((label, i) => (
-          <div 
-            key={i} 
-            style={{
-              ...styles.stepItem,
-              ...(step === i + 1 ? styles.stepActive : {}),
-              ...(step > i + 1 ? styles.stepCompleted : {})
-            }}
-            onClick={() => setStep(i + 1)}
-          >
-            <div style={styles.stepNumber}>{i + 1}</div>
-            <span style={styles.stepLabel}>{label}</span>
-          </div>
-        ))}
-      </div>
-    );
+  function updateFormData(updates: Partial<TemplateFormData>) {
+    setFormData(prev => ({ ...prev, ...updates }));
   }
 
-  function renderStep1() {
-    return (
-      <div style={styles.stepContent}>
-        <h3 style={styles.stepTitle}>Basic Information</h3>
-        
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Template Name *</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            style={styles.input}
-            placeholder="e.g., Advanced Course Certificate"
+  function renderCurrentStep() {
+    switch (step) {
+      case 1:
+        return (
+          <BasicInfoStep 
+            formData={formData} 
+            updateFormData={updateFormData}
           />
-        </div>
-
-        <div style={styles.formRow}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Type</label>
-            <select
-              value={formData.type}
-              onChange={e => {
-                const type = e.target.value;
-                const isBadge = type === 'badge';
-                setFormData(prev => ({
-                  ...prev,
-                  type,
-                  layout: {
-                    ...prev.layout,
-                    width: isBadge ? 400 : 1056,
-                    height: isBadge ? 400 : 816,
-                    orientation: isBadge ? 'square' : 'landscape'
-                  }
-                }));
-              }}
-              style={styles.input}
-            >
-              <option value="certificate">Certificate</option>
-              <option value="badge">Badge</option>
-            </select>
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Category</label>
-            <select
-              value={formData.category}
-              onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
-              style={styles.input}
-            >
-              <option value="course">Course</option>
-              <option value="exam">Exam</option>
-              <option value="participation">Participation</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={formData.active}
-              onChange={e => setFormData(prev => ({ ...prev, active: e.target.checked }))}
-            />
-            Template Active (can be used to issue certificates)
-          </label>
-        </div>
-      </div>
-    );
-  }
-
-  function InfoIcon({ tooltip }: { tooltip: string }) {
-    const [showTooltip, setShowTooltip] = useState(false);
-    return (
-      <span 
-        style={styles.infoIcon}
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        onClick={() => setShowTooltip(!showTooltip)}
-      >
-        ⓘ
-        {showTooltip && (
-          <span style={styles.tooltip}>{tooltip}</span>
-        )}
-      </span>
-    );
-  }
-
-  function LabelWithInfo({ label, tooltip }: { label: string; tooltip: string }) {
-    return (
-      <label style={styles.labelWithInfo}>
-        {label}
-        <InfoIcon tooltip={tooltip} />
-      </label>
-    );
-  }
-
-  function renderLayoutAndStyles() {
-    return (
-      <div style={styles.stepContent}>
-        <h3 style={styles.stepTitle}>Layout & Styles</h3>
-
-        <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Dimensions</h4>
-          <div style={styles.formRow}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Width (px)</label>
-              <input
-                type="number"
-                value={formData.layout.width}
-                onChange={e => updateLayout('width', parseInt(e.target.value) || 1056)}
-                style={styles.input}
-                min={200}
-                max={2000}
-              />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Height (px)</label>
-              <input
-                type="number"
-                value={formData.layout.height}
-                onChange={e => updateLayout('height', parseInt(e.target.value) || 816)}
-                style={styles.input}
-                min={200}
-                max={2000}
-              />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Orientation</label>
-              <select
-                value={formData.layout.orientation}
-                onChange={e => updateLayout('orientation', e.target.value)}
-                style={styles.input}
-              >
-                {ORIENTATIONS.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Background Image</h4>
-          
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Upload Background</label>
-            <div style={styles.uploadArea}>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept="image/png,image/jpeg,image/jpg,image/webp"
-                style={{ display: 'none' }}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                style={styles.uploadBtn}
-                disabled={uploading}
-              >
-                {uploading ? 'Uploading...' : 'Choose Image'}
-              </button>
-              <span style={styles.uploadHint}>PNG, JPG, WebP (max 5MB)</span>
-            </div>
-          </div>
-
-          {formData.layout.background_url && (
-            <>
-              <div style={styles.uploadedIndicator}>
-                <span style={styles.checkIcon}>&#10003;</span>
-                <span style={styles.uploadedText}>
-                  {backgroundFilename || 'Background image uploaded'}
-                </span>
-              </div>
-              
-              <div style={styles.formRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Background Size</label>
-                  <select
-                    value={formData.layout.background_size}
-                    onChange={e => updateLayout('background_size', e.target.value)}
-                    style={styles.input}
-                  >
-                    {BACKGROUND_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Background Position</label>
-                  <select
-                    value={formData.layout.background_position}
-                    onChange={e => updateLayout('background_position', e.target.value)}
-                    style={styles.input}
-                  >
-                    {BACKGROUND_POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-              </div>
-              
-              <div style={styles.bgPreview}>
-                <div style={{
-                  width: 200,
-                  height: 150,
-                  backgroundImage: `url(${formData.layout.background_url})`,
-                  backgroundSize: formData.layout.background_size,
-                  backgroundPosition: formData.layout.background_position,
-                  backgroundRepeat: 'no-repeat',
-                  border: '1px solid #ddd',
-                  borderRadius: 4
-                }} />
-                <button
-                  type="button"
-                  onClick={handleRemoveBackground}
-                  style={styles.removeBtn}
-                  disabled={removing}
-                >
-                  {removing ? 'Removing...' : 'Remove Background'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Global Styles</h4>
-          <div style={styles.formRow}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Global Font Family</label>
-              <select
-                value={formData.styles.global_font_family}
-                onChange={e => updateStyles('global_font_family', e.target.value)}
-                style={styles.input}
-              >
-                {FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Color Theme</label>
-              <select
-                value={formData.styles.color_theme}
-                onChange={e => updateStyles('color_theme', e.target.value)}
-                style={styles.input}
-              >
-                {COLOR_THEMES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.section}>
-          <h4 style={styles.sectionTitle}>Meta Settings</h4>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Issued By Label</label>
-            <input
-              type="text"
-              value={formData.meta.issued_by_label}
-              onChange={e => updateMeta('issued_by_label', e.target.value)}
-              style={styles.input}
-              placeholder="e.g., NexSAA Academy"
-            />
-          </div>
-
-          <div style={styles.formRow}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Default Expiry (months)</label>
-              <input
-                type="number"
-                value={formData.meta.default_expiry_months || ''}
-                onChange={e => updateMeta('default_expiry_months', e.target.value ? parseInt(e.target.value) : null)}
-                style={styles.input}
-                placeholder="Leave empty for no expiry"
-                min={1}
-              />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>&nbsp;</label>
-              <label style={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={formData.meta.allow_expiry_override}
-                  onChange={e => updateMeta('allow_expiry_override', e.target.checked)}
-                />
-                Allow Expiry Override
-              </label>
-            </div>
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Seal Image URL</label>
-            <input
-              type="text"
-              value={formData.meta.seal_url}
-              onChange={e => updateMeta('seal_url', e.target.value)}
-              style={styles.input}
-              placeholder="https://example.com/seal.png"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function renderFieldsStep() {
-    return (
-      <div style={styles.stepContent}>
-        <h3 style={styles.stepTitle}>Template Fields</h3>
-        <p style={styles.helpText}>Add all elements that appear on your certificate. Use <strong>Static</strong> for fixed text like "Certificate of Participation", and <strong>Dynamic</strong> for content that changes per recipient like student name or date.</p>
-
-        <button onClick={addField} style={styles.addBtn}>+ Add Field</button>
-
-        {formData.fields.length === 0 && (
-          <div style={styles.emptyFields}>
-            No fields added yet. Click "Add Field" to create your first field.
-          </div>
-        )}
-
-        {formData.fields.map((field, index) => (
-          <div key={index} style={styles.fieldCard}>
-            <div style={styles.fieldHeader}>
-              <span style={styles.fieldIndex}>Field {index + 1}</span>
-              <div style={styles.fieldActions}>
-                <button onClick={() => moveField(index, 'up')} style={styles.iconBtn} disabled={index === 0}>↑</button>
-                <button onClick={() => moveField(index, 'down')} style={styles.iconBtn} disabled={index === formData.fields.length - 1}>↓</button>
-                <button onClick={() => removeField(index)} style={styles.deleteBtn}>Remove</button>
-              </div>
-            </div>
-
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Key (identifier)" 
-                  tooltip="A unique identifier for this field used in the system (e.g., recipient_name, course_title). Use lowercase with underscores, no spaces."
-                />
-                <input
-                  type="text"
-                  value={field.key}
-                  onChange={e => updateField(index, { key: e.target.value })}
-                  style={styles.input}
-                  placeholder="e.g., recipient_name"
-                />
-              </div>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Label" 
-                  tooltip="The display name shown to users when filling out the certificate. This is the human-readable version of the key (e.g., 'Recipient Name', 'Course Title')."
-                />
-                <input
-                  type="text"
-                  value={field.label}
-                  onChange={e => updateField(index, { label: e.target.value })}
-                  style={styles.input}
-                  placeholder="e.g., Recipient Name"
-                />
-              </div>
-            </div>
-
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Field Type" 
-                  tooltip="Choose the type: 'text' for names/titles, 'date' for dates, 'number' for scores, 'image' for photos, 'line_horizontal' or 'line_vertical' for decorative lines."
-                />
-                <select
-                  value={field.type}
-                  onChange={e => updateField(index, { type: e.target.value })}
-                  style={styles.input}
-                >
-                  {FIELD_TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
-                </select>
-              </div>
-              {!field.type.startsWith('line_') && (
-                <div style={styles.formGroup}>
-                  <LabelWithInfo 
-                    label="Content Mode" 
-                    tooltip="Static: Fixed text that stays the same on every certificate (e.g., 'Certificate of Participation'). Dynamic: Placeholder that gets filled with different data for each recipient (e.g., student name)."
-                  />
-                  <select
-                    value={field.mode || 'static'}
-                    onChange={e => updateField(index, { mode: e.target.value as 'static' | 'dynamic' })}
-                    style={styles.input}
-                  >
-                    <option value="static">Static (Fixed Text)</option>
-                    <option value="dynamic">Dynamic (Per Recipient)</option>
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {!field.type.startsWith('line_') && (
-              <div style={styles.formRow}>
-                {(field.mode || 'static') === 'static' ? (
-                  <div style={{ ...styles.formGroup, flex: 1 }}>
-                    <LabelWithInfo 
-                      label="Static Content" 
-                      tooltip="The exact text that will appear on every certificate. This won't change per recipient."
-                    />
-                    <input
-                      type="text"
-                      value={field.staticContent || ''}
-                      onChange={e => updateField(index, { staticContent: e.target.value })}
-                      style={styles.input}
-                      placeholder="e.g., Certificate of Participation"
-                    />
-                  </div>
-                ) : (
-                  <div style={{ ...styles.formGroup, flex: 1 }}>
-                    <LabelWithInfo 
-                      label="Placeholder Text" 
-                      tooltip="Sample text shown in the preview to indicate what data will be filled. Shown in brackets like [Student Name]."
-                    />
-                    <input
-                      type="text"
-                      value={field.placeholder || ''}
-                      onChange={e => updateField(index, { placeholder: e.target.value })}
-                      style={styles.input}
-                      placeholder="e.g., Student Name"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div style={styles.sectionLabel}>Position <InfoIcon tooltip="Controls where this field appears on the certificate. X is horizontal position (left/right), Y is vertical position (top/bottom). Values are in pixels from the top-left corner." /></div>
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="X Position (px)" 
-                  tooltip="Horizontal position from the left edge. For centered elements, use half the template width (e.g., 528 for a 1056px wide certificate)."
-                />
-                <input
-                  type="number"
-                  value={field.position.x}
-                  onChange={e => updateFieldPosition(index, 'x', parseInt(e.target.value) || 0)}
-                  style={styles.input}
-                />
-              </div>
-              <div style={styles.formGroup}>
-                <LabelWithInfo 
-                  label="Y Position (px)" 
-                  tooltip="Vertical position from the top edge. Lower values place the element higher on the certificate. Space elements 50-80px apart for readability."
-                />
-                <input
-                  type="number"
-                  value={field.position.y}
-                  onChange={e => updateFieldPosition(index, 'y', parseInt(e.target.value) || 0)}
-                  style={styles.input}
-                />
-              </div>
-            </div>
-
-            {field.type.startsWith('line_') ? (
-              <>
-                <div style={styles.sectionLabel}>Line Settings <InfoIcon tooltip="Configure the appearance of this decorative line. Adjust length, thickness, and color to match your design." /></div>
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <LabelWithInfo 
-                      label="Length (px)" 
-                      tooltip="The length of the line in pixels. For signature lines, 150-250px works well. For decorative dividers, try 300-500px."
-                    />
-                    <input
-                      type="number"
-                      value={field.line?.width || 200}
-                      onChange={e => updateFieldLine(index, 'width', parseInt(e.target.value) || 200)}
-                      style={styles.input}
-                      min={10}
-                      max={1000}
-                    />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <LabelWithInfo 
-                      label="Thickness (px)" 
-                      tooltip="The thickness of the line in pixels. Use 1-2px for subtle lines, 3-5px for visible dividers, 6+ for bold decorative elements."
-                    />
-                    <input
-                      type="number"
-                      value={field.line?.height || 2}
-                      onChange={e => updateFieldLine(index, 'height', parseInt(e.target.value) || 2)}
-                      style={styles.input}
-                      min={1}
-                      max={20}
-                    />
-                  </div>
-                </div>
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <LabelWithInfo 
-                      label="Line Color" 
-                      tooltip="The color of the line. Match your theme colors or use subtle grays for understated dividers."
-                    />
-                    <div style={styles.colorInputWrapper}>
-                      <input
-                        type="color"
-                        value={field.line?.color || '#333333'}
-                        onChange={e => updateFieldLine(index, 'color', e.target.value)}
-                        style={styles.colorInput}
-                      />
-                      <input
-                        type="text"
-                        value={field.line?.color || '#333333'}
-                        onChange={e => updateFieldLine(index, 'color', e.target.value)}
-                        style={styles.colorText}
-                        placeholder="#333333"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={styles.sectionLabel}>Font Settings <InfoIcon tooltip="Controls how the text appears on the certificate. Larger fonts (36-48px) work well for names, smaller fonts (18-24px) for dates and details." /></div>
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <LabelWithInfo 
-                      label="Font Family" 
-                      tooltip="The typeface for this field. Georgia and Times New Roman are classic/formal, Arial and Helvetica are modern/clean, Roboto is contemporary."
-                    />
-                    <select
-                      value={field.font.family}
-                      onChange={e => updateFieldFont(index, 'family', e.target.value)}
-                      style={styles.input}
-                    >
-                      {FONT_FAMILIES.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <LabelWithInfo 
-                      label="Size (px)" 
-                      tooltip="Font size in pixels. Recommended: 36-48px for recipient names, 24-32px for titles, 16-20px for dates and small text."
-                    />
-                    <input
-                      type="number"
-                      value={field.font.size}
-                      onChange={e => updateFieldFont(index, 'size', parseInt(e.target.value) || 12)}
-                      style={styles.input}
-                      min={8}
-                      max={120}
-                    />
-                  </div>
-                </div>
-
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <LabelWithInfo 
-                      label="Font Weight" 
-                      tooltip="Text thickness. 'bold' for emphasis (names, titles), 'normal' for regular text (dates, details), 'lighter' for subtle text."
-                    />
-                    <select
-                      value={field.font.weight}
-                      onChange={e => updateFieldFont(index, 'weight', e.target.value)}
-                      style={styles.input}
-                    >
-                      {FONT_WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
-                    </select>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <LabelWithInfo 
-                      label="Color" 
-                      tooltip="Text color. Dark colors (#333333, #1a1a1a) for main text, accent colors for highlights. Click the color box or enter a hex code."
-                    />
-                    <div style={styles.colorInputWrapper}>
-                      <input
-                        type="color"
-                        value={field.font.color}
-                        onChange={e => updateFieldFont(index, 'color', e.target.value)}
-                        style={styles.colorInput}
-                      />
-                      <input
-                        type="text"
-                        value={field.font.color}
-                        onChange={e => updateFieldFont(index, 'color', e.target.value)}
-                        style={styles.colorText}
-                        placeholder="#333333"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  function renderReviewStep() {
-    return (
-      <div style={styles.stepContent}>
-        <h3 style={styles.stepTitle}>Review & Create</h3>
-
-        <div style={styles.reviewSection}>
-          <h4>Basic Information</h4>
-          <div style={styles.reviewGrid}>
-            <div><strong>Name:</strong> {formData.name || '(not set)'}</div>
-            <div><strong>Type:</strong> {formData.type}</div>
-            <div><strong>Category:</strong> {formData.category}</div>
-            <div><strong>Active:</strong> {formData.active ? 'Yes' : 'No'}</div>
-          </div>
-        </div>
-
-        <div style={styles.reviewSection}>
-          <h4>Layout</h4>
-          <div style={styles.reviewGrid}>
-            <div><strong>Size:</strong> {formData.layout.width} x {formData.layout.height}px</div>
-            <div><strong>Orientation:</strong> {formData.layout.orientation}</div>
-            <div><strong>Background:</strong> {formData.layout.background_url ? (backgroundFilename || 'Custom image uploaded') : '(none)'}</div>
-          </div>
-        </div>
-
-        <div style={styles.reviewSection}>
-          <h4>Fields ({formData.fields.length})</h4>
-          {formData.fields.length === 0 ? (
-            <p style={styles.warning}>No fields defined. Please go back and add at least one field.</p>
-          ) : (
-            <div style={styles.fieldsList}>
-              {formData.fields.map((f, i) => (
-                <div key={i} style={styles.reviewField}>
-                  <strong>{f.key}</strong> ({f.type}) - {f.font.family} {f.font.size}px at ({f.position.x}, {f.position.y})
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div style={styles.reviewSection}>
-          <h4>Styles & Meta</h4>
-          <div style={styles.reviewGrid}>
-            <div><strong>Font:</strong> {formData.styles.global_font_family}</div>
-            <div><strong>Theme:</strong> {formData.styles.color_theme}</div>
-            <div><strong>Issued By:</strong> {formData.meta.issued_by_label}</div>
-            <div><strong>Expiry:</strong> {formData.meta.default_expiry_months ? `${formData.meta.default_expiry_months} months` : 'Never'}</div>
-            <div><strong>Signature:</strong> {formData.meta.signature_block.show ? formData.meta.signature_block.name || '(no name)' : 'Hidden'}</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function getThemeColors(theme: string) {
-    const themes: Record<string, { primary: string; secondary: string; accent: string; border: string }> = {
-      'classic-blue': { primary: '#1a365d', secondary: '#2c5282', accent: '#3182ce', border: '#90cdf4' },
-      'achievement-gold': { primary: '#744210', secondary: '#975a16', accent: '#d69e2e', border: '#ecc94b' },
-      'event-purple': { primary: '#44337a', secondary: '#553c9a', accent: '#805ad5', border: '#b794f4' },
-      'custom-teal': { primary: '#234e52', secondary: '#285e61', accent: '#319795', border: '#81e6d9' },
-      'professional-navy': { primary: '#1a202c', secondary: '#2d3748', accent: '#4a5568', border: '#a0aec0' },
-      'modern-green': { primary: '#22543d', secondary: '#276749', accent: '#38a169', border: '#9ae6b4' }
-    };
-    return themes[theme] || themes['classic-blue'];
-  }
-
-  function renderLivePreview() {
-    const { layout, fields, styles: formStyles, meta, type, name, category } = formData;
-    const scale = Math.min(350 / layout.width, 280 / layout.height);
-    const colors = getThemeColors(formStyles.color_theme);
-    
-    return (
-      <div style={styles.previewPanel}>
-        <h4 style={styles.previewTitle}>Live Preview</h4>
-        <div style={styles.previewScaleContainer}>
-          <div style={{
-            width: layout.width * scale,
-            height: layout.height * scale,
-            backgroundColor: '#fff',
-            backgroundImage: layout.background_url ? `url(${layout.background_url})` : 'none',
-            backgroundSize: layout.background_size || 'cover',
-            backgroundPosition: layout.background_position || 'center',
-            backgroundRepeat: 'no-repeat',
-            border: `3px solid ${colors.border}`,
-            borderRadius: 8,
-            position: 'relative',
-            overflow: 'hidden',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-          }}>
-            {fields.length === 0 && !layout.background_url && (
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                textAlign: 'center',
-                color: '#999',
-                fontSize: Math.max(8, 12 * scale)
-              }}>
-                <div style={{ marginBottom: 8 }}>Empty Template</div>
-                <div style={{ fontSize: Math.max(6, 10 * scale) }}>Add fields to see them here</div>
-              </div>
-            )}
-
-            {fields.map((field, idx) => {
-              if (field.type === 'line_horizontal') {
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      position: 'absolute',
-                      left: field.position.x * scale,
-                      top: field.position.y * scale,
-                      transform: 'translateX(-50%)',
-                      width: (field.line?.width || 200) * scale,
-                      height: (field.line?.height || 2) * scale,
-                      backgroundColor: field.line?.color || '#333333'
-                    }}
-                    title={field.label || field.key || 'Horizontal Line'}
-                  />
-                );
-              }
-              if (field.type === 'line_vertical') {
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      position: 'absolute',
-                      left: field.position.x * scale,
-                      top: field.position.y * scale,
-                      transform: 'translateX(-50%)',
-                      width: (field.line?.height || 2) * scale,
-                      height: (field.line?.width || 200) * scale,
-                      backgroundColor: field.line?.color || '#333333'
-                    }}
-                    title={field.label || field.key || 'Vertical Line'}
-                  />
-                );
-              }
-              const isStatic = (field.mode || 'static') === 'static';
-              const displayText = isStatic 
-                ? (field.staticContent || field.label || `[Static Field ${idx + 1}]`)
-                : `[${field.placeholder || field.label || 'Dynamic Field'}]`;
-              
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    position: 'absolute',
-                    left: field.position.x * scale,
-                    top: field.position.y * scale,
-                    transform: 'translateX(-50%)',
-                    fontSize: Math.max(6, field.font.size * scale),
-                    color: isStatic ? field.font.color : '#666',
-                    fontFamily: field.font.family,
-                    fontWeight: field.font.weight as any,
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    fontStyle: isStatic ? 'normal' : 'italic'
-                  }}
-                  title={isStatic ? 'Static: ' + (field.staticContent || field.label) : 'Dynamic: ' + (field.placeholder || field.label)}
-                >
-                  {displayText}
-                </div>
-              );
-            })}
-          </div>
-          
-          <div style={styles.previewMeta}>
-            <span>{layout.width} x {layout.height}px</span>
-            <span>{layout.orientation}</span>
-            <span>{fields.length} fields</span>
-          </div>
-        </div>
-      </div>
-    );
+        );
+      case 2:
+        return (
+          <LayoutStylesStep
+            formData={formData}
+            updateLayout={updateLayout}
+            updateStyles={updateStyles}
+            updateMeta={updateMeta}
+            updateSignatureBlock={updateSignatureBlock}
+            uploading={uploading}
+            removing={removing}
+            backgroundFilename={backgroundFilename}
+            fileInputRef={fileInputRef}
+            onFileUpload={onFileUpload}
+            onRemoveBackground={onRemoveBackground}
+          />
+        );
+      case 3:
+        return (
+          <FieldsStep
+            formData={formData}
+            addField={addField}
+            updateField={updateField}
+            updateFieldPosition={updateFieldPosition}
+            updateFieldLine={updateFieldLine}
+            removeField={removeField}
+            moveField={moveField}
+          />
+        );
+      case 4:
+        return (
+          <ReviewStep 
+            formData={formData}
+            backgroundFilename={backgroundFilename}
+          />
+        );
+      default:
+        return null;
+    }
   }
 
   return (
-    <div style={styles.pageContainer}>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Create New Template</h2>
-          <button onClick={() => setLocation('/templates')} style={styles.backBtn}>
-            Back to Templates
-          </button>
-        </div>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Create New Template</h1>
+        <button onClick={() => setLocation('/templates')} style={styles.backBtn}>
+          Back to Templates
+        </button>
+      </div>
 
-        {renderStepIndicator()}
+      <div style={styles.mainLayout}>
+        <div style={styles.formPanel}>
+          <Stepper currentStep={step} steps={STEPS} />
+          
+          {error && <div style={styles.error}>{error}</div>}
+          
+          {renderCurrentStep()}
 
-        {error && <div style={styles.error}>{error}</div>}
-
-        <div style={styles.mainLayout}>
-          <div style={styles.formContainer}>
-            {step === 1 && renderStep1()}
-            {step === 2 && renderLayoutAndStyles()}
-            {step === 3 && renderFieldsStep()}
-            {step === 4 && renderReviewStep()}
+          <div style={styles.navButtons}>
+            <button 
+              onClick={handlePrev} 
+              style={{ ...styles.prevBtn, opacity: step === 1 ? 0.5 : 1 }}
+              disabled={step === 1}
+            >
+              Previous
+            </button>
+            
+            {step < STEPS.length ? (
+              <button onClick={handleNext} style={styles.nextBtn}>
+                Next
+              </button>
+            ) : (
+              <button 
+                onClick={handleSubmit} 
+                style={{ ...styles.nextBtn, backgroundColor: '#2e7d32' }}
+                disabled={saving}
+              >
+                {saving ? 'Creating...' : 'Create Template'}
+              </button>
+            )}
           </div>
-          
-          {renderLivePreview()}
         </div>
 
-        <div style={styles.navigation}>
-          <button
-            onClick={() => setStep(Math.max(1, step - 1))}
-            style={styles.navBtn}
-            disabled={step === 1}
-          >
-            Previous
-          </button>
-          
-          {step < totalSteps ? (
-            <button
-              onClick={() => setStep(Math.min(totalSteps, step + 1))}
-              style={styles.navBtnPrimary}
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              style={styles.submitBtn}
-              disabled={saving}
-            >
-              {saving ? 'Creating...' : 'Create Template'}
-            </button>
-          )}
-        </div>
+        <LivePreview formData={formData} />
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  pageContainer: { backgroundColor: '#f5f5f5', minHeight: '100vh' },
-  container: { maxWidth: 1200, margin: '0 auto', padding: 20 },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { margin: 0, fontSize: 28, color: '#333' },
-  backBtn: { padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: 4, cursor: 'pointer' },
-  stepIndicator: { display: 'flex', justifyContent: 'space-between', marginBottom: 30, padding: '0 20px' },
-  mainLayout: { display: 'flex', gap: 24, alignItems: 'flex-start' },
-  stepItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', opacity: 0.5 },
-  stepActive: { opacity: 1 },
-  stepCompleted: { opacity: 0.8 },
-  stepNumber: { 
-    width: 32, height: 32, borderRadius: '50%', backgroundColor: '#e0e0e0', 
-    display: 'flex', alignItems: 'center', justifyContent: 'center', 
-    fontWeight: 'bold', marginBottom: 4 
-  },
-  stepLabel: { fontSize: 12, color: '#666' },
-  formContainer: { flex: 1, backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, padding: 30, marginBottom: 20 },
-  stepContent: {},
-  stepTitle: { margin: '0 0 20px 0', fontSize: 22, color: '#333', borderBottom: '2px solid #e0e0e0', paddingBottom: 10 },
-  formGroup: { marginBottom: 16, flex: 1 },
-  formRow: { display: 'flex', gap: 16 },
-  label: { display: 'block', marginBottom: 6, fontSize: 14, fontWeight: 500, color: '#333' },
-  input: { width: '100%', padding: '10px 12px', borderRadius: 4, border: '1px solid #ddd', fontSize: 14, boxSizing: 'border-box' },
-  checkboxLabel: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#333', cursor: 'pointer', padding: '10px 0' },
-  helpText: { fontSize: 12, color: '#888', marginTop: 4 },
-  navigation: { display: 'flex', justifyContent: 'space-between' },
-  navBtn: { padding: '12px 24px', backgroundColor: '#f5f5f5', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-  navBtnPrimary: { padding: '12px 24px', backgroundColor: '#1976D2', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontWeight: 600 },
-  submitBtn: { padding: '12px 32px', backgroundColor: '#4CAF50', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontWeight: 600 },
-  error: { backgroundColor: '#ffebee', color: '#c62828', padding: 12, borderRadius: 4, marginBottom: 20 },
-  addBtn: { padding: '10px 20px', backgroundColor: '#1976D2', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', marginBottom: 20, fontSize: 14 },
-  emptyFields: { textAlign: 'center', padding: 40, color: '#666', backgroundColor: '#f9f9f9', borderRadius: 8 },
-  fieldCard: { border: '1px solid #e0e0e0', borderRadius: 8, padding: 20, marginBottom: 16, backgroundColor: '#fafafa' },
-  fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  fieldIndex: { fontWeight: 600, color: '#1976D2' },
-  fieldActions: { display: 'flex', gap: 8 },
-  iconBtn: { padding: '4px 8px', backgroundColor: '#f5f5f5', border: '1px solid #ddd', borderRadius: 4, cursor: 'pointer' },
-  deleteBtn: { padding: '4px 12px', backgroundColor: '#ffebee', color: '#c62828', border: '1px solid #ffcdd2', borderRadius: 4, cursor: 'pointer' },
-  sectionLabel: { fontSize: 13, fontWeight: 600, color: '#666', marginTop: 16, marginBottom: 8, textTransform: 'uppercase' },
-  colorInputWrapper: { display: 'flex', gap: 8 },
-  colorInput: { width: 50, height: 38, padding: 2, border: '1px solid #ddd', borderRadius: 4, cursor: 'pointer' },
-  colorText: { flex: 1, padding: '10px 12px', borderRadius: 4, border: '1px solid #ddd', fontSize: 14 },
-  previewBox: { marginTop: 20, padding: 20, backgroundColor: '#f5f5f5', borderRadius: 8, textAlign: 'center' },
-  section: { marginBottom: 30, paddingBottom: 20, borderBottom: '1px solid #eee' },
-  sectionTitle: { margin: '0 0 16px 0', fontSize: 16, color: '#1976D2' },
-  reviewSection: { marginBottom: 20, padding: 16, backgroundColor: '#f9f9f9', borderRadius: 8 },
-  reviewGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, fontSize: 14 },
-  fieldsList: { display: 'flex', flexDirection: 'column', gap: 8 },
-  reviewField: { padding: 8, backgroundColor: '#fff', borderRadius: 4, fontSize: 13, border: '1px solid #e0e0e0' },
-  warning: { color: '#f57c00', fontWeight: 500 },
-  previewPanel: { 
-    width: 400, 
-    backgroundColor: '#fff', 
-    border: '1px solid #e0e0e0', 
-    borderRadius: 8, 
-    padding: 20, 
-    position: 'sticky',
-    top: 20
-  },
-  previewTitle: { 
-    margin: '0 0 16px 0', 
-    fontSize: 16, 
-    color: '#333', 
-    textAlign: 'center',
-    borderBottom: '1px solid #eee',
-    paddingBottom: 12
-  },
-  previewScaleContainer: { 
-    display: 'flex', 
-    flexDirection: 'column', 
-    alignItems: 'center' 
-  },
-  previewMeta: { 
-    display: 'flex', 
-    gap: 16, 
-    marginTop: 12, 
-    fontSize: 12, 
-    color: '#666' 
-  },
-  infoIcon: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 16,
-    height: 16,
-    marginLeft: 6,
-    fontSize: 12,
-    color: '#1976D2',
-    cursor: 'pointer',
-    position: 'relative',
-    verticalAlign: 'middle'
-  },
-  tooltip: {
-    position: 'absolute',
-    bottom: '100%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    backgroundColor: '#333',
-    color: '#fff',
-    padding: '10px 14px',
-    borderRadius: 6,
-    fontSize: 12,
-    lineHeight: 1.5,
-    width: 260,
-    textAlign: 'left',
-    zIndex: 1000,
-    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-    marginBottom: 8,
-    fontWeight: 'normal'
-  },
-  labelWithInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: 6,
-    fontSize: 14,
-    fontWeight: 500,
-    color: '#333'
-  },
-  uploadArea: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12
-  },
-  uploadBtn: {
-    padding: '10px 20px',
-    backgroundColor: '#1976D2',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 6,
-    cursor: 'pointer',
-    fontSize: 14,
-    fontWeight: 500
-  },
-  uploadHint: {
-    fontSize: 12,
-    color: '#888'
-  },
-  bgPreview: {
-    marginTop: 16,
-    display: 'flex',
-    alignItems: 'flex-end',
-    gap: 16
-  },
-  removeBtn: {
-    padding: '8px 16px',
-    backgroundColor: '#ffebee',
-    color: '#c62828',
-    border: '1px solid #ffcdd2',
-    borderRadius: 4,
-    cursor: 'pointer',
-    fontSize: 13
-  },
-  uploadedIndicator: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '10px 14px',
-    backgroundColor: '#e8f5e9',
-    border: '1px solid #c8e6c9',
-    borderRadius: 6,
-    marginBottom: 12
-  },
-  checkIcon: {
-    color: '#2e7d32',
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
-  uploadedText: {
-    color: '#2e7d32',
-    fontSize: 14,
-    fontWeight: 500
-  }
-};
